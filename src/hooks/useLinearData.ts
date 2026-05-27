@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useAppStore } from '../stores/useAppStore'
-import { fetchViewer, fetchAllIssues, fetchTeams, fetchMembers } from '../services/linearService'
+import { fetchViewer, fetchAllIssues, fetchTeams, fetchMembers, fetchIssueComments } from '../services/linearService'
 
 export const useLinearViewer = () => {
   const apiKey = useAppStore((s) => s.settings.linearApiKey)
@@ -51,6 +51,16 @@ export const useLinearTeams = () => {
     queryFn: () => fetchTeams(apiKey),
     enabled: !!apiKey,
     staleTime: 30 * 60 * 1000
+  })
+}
+
+export const useIssueComments = (issueId: string | undefined) => {
+  const apiKey = useAppStore((s) => s.settings.linearApiKey)
+  return useQuery({
+    queryKey: ['issue-comments', issueId, apiKey],
+    queryFn: () => fetchIssueComments(apiKey, issueId!),
+    enabled: !!apiKey && !!issueId,
+    staleTime: 60 * 1000
   })
 }
 

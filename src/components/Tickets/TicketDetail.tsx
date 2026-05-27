@@ -1,8 +1,9 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, Chip, Link, Divider, Stack, Avatar } from '@mui/material'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, Chip, Link, Divider, Stack, Avatar, CircularProgress } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
-import { LinearIssue } from '../../types'
+import { LinearIssue, LinearComment } from '../../types'
 import { STATE_TYPE_COLORS, PRIORITY_COLORS, PRIORITY_LABELS } from '../../constants'
+import { useIssueComments } from '../../hooks/useLinearData'
 import dayjs from 'dayjs'
 
 const MetaGrid = styled(Box)(({ theme }) => ({
@@ -27,7 +28,14 @@ interface TicketDetailProps {
 }
 
 export const TicketDetail = ({ issue, onClose }: TicketDetailProps) => {
+  const { data: commentData, isLoading: commentsLoading, isError: commentsError } = useIssueComments(issue?.id)
   if (!issue) return null
+
+  const inlineComments: LinearComment[] = issue.comments ?? []
+  const fetched = commentData?.comments
+  const displayComments: LinearComment[] = fetched && fetched.length > 0 ? fetched : inlineComments
+  const totalCount = fetched ? fetched.length : (issue.commentCount ?? 0)
+  const hasMore = fetched ? !!commentData?.hasMore : !!issue.hasMoreComments
 
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth>
@@ -118,20 +126,28 @@ export const TicketDetail = ({ issue, onClose }: TicketDetailProps) => {
 
         <Divider sx={{ my: 2 }} />
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Comments {issue.commentCount ? `(${issue.hasMoreComments ? `${issue.commentCount}+` : issue.commentCount})` : ''}
-          </Typography>
-          {issue.hasMoreComments && (
+          <Box display="flex" alignItems="center" gap={1}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Comments {totalCount ? `(${hasMore ? `${totalCount}+` : totalCount})` : ''}
+            </Typography>
+            {commentsLoading && !fetched && <CircularProgress size={12} />}
+          </Box>
+          {hasMore && (
             <Link href={issue.url} target="_blank" rel="noreferrer" variant="caption">
               See all in Linear
             </Link>
           )}
         </Box>
-        {!issue.comments || issue.comments.length === 0 ? (
-          <Typography variant="body2" color="text.disabled">No comments yet.</Typography>
+        {commentsError && (
+          <Typography variant="caption" color="error">Failed to load full comment thread.</Typography>
+        )}
+        {displayComments.length === 0 ? (
+          <Typography variant="body2" color="text.disabled">
+            {commentsLoading ? 'Loading comments…' : 'No comments yet.'}
+          </Typography>
         ) : (
           <Stack spacing={1.5}>
-            {[...issue.comments]
+            {[...displayComments]
               .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
               .map((c) => (
                 <Box key={c.id} display="flex" gap={1.25}>

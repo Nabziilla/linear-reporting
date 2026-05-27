@@ -1,4 +1,4 @@
-import { LinearIssue, LinearTeam, LinearUser } from '../types'
+import { LinearIssue, LinearTeam, LinearUser, LinearComment } from '../types'
 import { LINEAR_GRAPHQL_ENDPOINT, ISSUES_PER_PAGE } from '../constants'
 
 const ISSUES_QUERY = `
@@ -12,7 +12,7 @@ const ISSUES_QUERY = `
         createdAt updatedAt completedAt dueDate estimate url
         labels { nodes { name color } }
         project { id name }
-        comments(first: 5, orderBy: updatedAt) {
+        comments(first: 1, orderBy: updatedAt) {
           nodes { id body createdAt user { name email } }
           pageInfo { hasNextPage }
         }
@@ -39,6 +39,17 @@ const MEMBERS_QUERY = `
   query Members {
     users(filter: { active: { eq: true } }) {
       nodes { id name email avatarUrl }
+    }
+  }
+`
+
+const ISSUE_COMMENTS_QUERY = `
+  query IssueComments($issueId: String!) {
+    issue(id: $issueId) {
+      comments(first: 50, orderBy: createdAt) {
+        nodes { id body createdAt user { name email } }
+        pageInfo { hasNextPage }
+      }
     }
   }
 `
@@ -105,4 +116,14 @@ export const fetchTeams = async (apiKey: string): Promise<LinearTeam[]> => {
 export const fetchMembers = async (apiKey: string): Promise<LinearUser[]> => {
   const data = await executeQuery(apiKey, MEMBERS_QUERY)
   return data.users.nodes
+}
+
+export const fetchIssueComments = async (
+  apiKey: string,
+  issueId: string
+): Promise<{ comments: LinearComment[]; hasMore: boolean }> => {
+  const data = await executeQuery(apiKey, ISSUE_COMMENTS_QUERY, { issueId })
+  const nodes = data.issue?.comments?.nodes ?? []
+  const hasMore = !!data.issue?.comments?.pageInfo?.hasNextPage
+  return { comments: nodes, hasMore }
 }
