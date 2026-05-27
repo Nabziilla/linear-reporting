@@ -17,26 +17,26 @@ export const PRIORITY_COLORS: Record<Priority, string> = {
 }
 
 export const STATE_TYPE_LABELS: Record<StateType, string> = {
+  triage: 'Triage',
   backlog: 'Backlog',
   unstarted: 'Todo',
   started: 'In Progress',
-  review: 'In Review',
-  qa: 'In QA',
   completed: 'Done',
-  cancelled: 'Cancelled'
+  canceled: 'Cancelled',
+  duplicate: 'Duplicate'
 }
 
 export const STATE_TYPE_COLORS: Record<StateType, string> = {
+  triage: '#eab308',
   backlog: '#94a3b8',
   unstarted: '#3b82f6',
   started: '#f97316',
-  review: '#8b5cf6',
-  qa: '#ec4899',
   completed: '#22c55e',
-  cancelled: '#ef4444'
+  canceled: '#ef4444',
+  duplicate: '#a855f7'
 }
 
-export const ALL_STATE_TYPES: StateType[] = ['backlog', 'unstarted', 'started', 'review', 'qa', 'completed', 'cancelled']
+export const ALL_STATE_TYPES: StateType[] = ['triage', 'backlog', 'unstarted', 'started', 'completed', 'canceled', 'duplicate']
 export const ALL_PRIORITIES: Priority[] = [0, 1, 2, 3, 4]
 
 export const STORAGE_KEYS = {
@@ -45,7 +45,7 @@ export const STORAGE_KEYS = {
 } as const
 
 export const LINEAR_GRAPHQL_ENDPOINT = 'https://api.linear.app/graphql'
-export const ISSUES_PER_PAGE = 100
+export const ISSUES_PER_PAGE = 250
 
 export const NAV_ROUTES = {
   DASHBOARD: '/',

@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import SearchIcon from '@mui/icons-material/Search'
 import { useAppStore } from '../../stores/useAppStore'
 import { useLinearTeams, useLinearMembers, useLinearIssues } from '../../hooks/useLinearData'
-import { ALL_STATE_TYPES, ALL_PRIORITIES, STATE_TYPE_LABELS, PRIORITY_LABELS } from '../../constants'
+import { ALL_STATE_TYPES, ALL_PRIORITIES, STATE_TYPE_COLORS, PRIORITY_LABELS } from '../../constants'
 import { StateType, Priority } from '../../types'
 
 const FilterSection = styled(Box)(({ theme }) => ({
@@ -53,6 +53,7 @@ export const TicketFilters = () => {
 
   const hasOtherFilter =
     filters.stateTypes.length > 0 ||
+    filters.stateNames.length > 0 ||
     filters.priorities.length > 0 ||
     filters.teamIds.length > 0 ||
     filters.creatorIds.length > 0 ||
@@ -68,6 +69,7 @@ export const TicketFilters = () => {
     const matchingAssigneeIds = new Set<string>()
     for (const issue of issues) {
       if (filters.stateTypes.length > 0 && !filters.stateTypes.includes(issue.state.type)) continue
+      if (filters.stateNames.length > 0 && !filters.stateNames.includes(issue.state.name)) continue
       if (filters.priorities.length > 0 && !filters.priorities.includes(issue.priority)) continue
       if (filters.teamIds.length > 0 && !filters.teamIds.includes(issue.team.id)) continue
       if (filters.creatorIds.length > 0 && (!issue.creator || !filters.creatorIds.includes(issue.creator.id))) continue
@@ -82,14 +84,33 @@ export const TicketFilters = () => {
       if (issue.assignee?.id) matchingAssigneeIds.add(issue.assignee.id)
     }
     return allMembers.filter((m) => matchingAssigneeIds.has(m.id))
-  }, [hasOtherFilter, issues, filters.stateTypes, filters.priorities, filters.teamIds, filters.creatorIds, filters.labelNames, filters.searchQuery, allMembers])
+  }, [hasOtherFilter, issues, filters.stateTypes, filters.stateNames, filters.priorities, filters.teamIds, filters.creatorIds, filters.labelNames, filters.searchQuery, allMembers])
 
-  const toggleStateType = (type: StateType) => {
-    const next = filters.stateTypes.includes(type)
-      ? filters.stateTypes.filter((t) => t !== type)
-      : [...filters.stateTypes, type]
-    updateFilters({ stateTypes: next })
+  const toggleStateName = (name: string) => {
+    const next = filters.stateNames.includes(name)
+      ? filters.stateNames.filter((n) => n !== name)
+      : [...filters.stateNames, name]
+    updateFilters({ stateNames: next })
   }
+
+  const statusOptions = useMemo(() => {
+    const byName = new Map<string, { name: string; type: StateType; count: number }>()
+    for (const issue of issues) {
+      const name = issue.state?.name
+      const type = issue.state?.type as StateType | undefined
+      if (!name || !type || !ALL_STATE_TYPES.includes(type)) continue
+      const existing = byName.get(name)
+      if (existing) existing.count += 1
+      else byName.set(name, { name, type, count: 1 })
+    }
+    const typeOrder: Record<StateType, number> = {
+      triage: 0, backlog: 1, unstarted: 2, started: 3, completed: 4, canceled: 5, duplicate: 6
+    }
+    return Array.from(byName.values()).sort((a, b) => {
+      const t = typeOrder[a.type] - typeOrder[b.type]
+      return t !== 0 ? t : a.name.localeCompare(b.name)
+    })
+  }, [issues])
 
   const togglePriority = (p: Priority) => {
     const next = filters.priorities.includes(p)
@@ -119,11 +140,34 @@ export const TicketFilters = () => {
       <FilterSection>
         <SectionLabel>Status</SectionLabel>
         <FormGroup>
-          {ALL_STATE_TYPES.filter((type) => type !== 'backlog').map((type) => (
+          {statusOptions.map(({ name, type, count }) => (
             <FormControlLabel
-              key={type}
-              control={<Checkbox size="small" checked={filters.stateTypes.includes(type)} onChange={() => toggleStateType(type)} />}
-              label={<Typography variant="body2">{STATE_TYPE_LABELS[type]}</Typography>}
+              key={name}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={filters.stateNames.includes(name)}
+                  onChange={() => toggleStateName(name)}
+                />
+              }
+              label={
+                <Box display="flex" alignItems="center" gap={1} width="100%">
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: STATE_TYPE_COLORS[type],
+                      flexShrink: 0
+                    }}
+                  />
+                  <Typography variant="body2" sx={{ flex: 1 }}>{name}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {count}
+                  </Typography>
+                </Box>
+              }
+              sx={{ mr: 0, width: '100%', '& .MuiFormControlLabel-label': { width: '100%' } }}
             />
           ))}
         </FormGroup>

@@ -12,6 +12,10 @@ const ISSUES_QUERY = `
         createdAt updatedAt completedAt dueDate estimate url
         labels { nodes { name color } }
         project { id name }
+        comments(first: 5, orderBy: updatedAt) {
+          nodes { id body createdAt user { name email } }
+          pageInfo { hasNextPage }
+        }
       }
       pageInfo { hasNextPage endCursor }
     }
@@ -73,7 +77,17 @@ export const fetchAllIssues = async (apiKey: string): Promise<LinearIssue[]> => 
     const { nodes, pageInfo } = data.issues
     all.push(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ...nodes.map((n: any) => ({ ...n, labels: n.labels?.nodes ?? [] }))
+      ...nodes.map((n: any) => {
+        const commentNodes = n.comments?.nodes ?? []
+        const hasMoreComments = !!n.comments?.pageInfo?.hasNextPage
+        return {
+          ...n,
+          labels: n.labels?.nodes ?? [],
+          comments: commentNodes,
+          commentCount: commentNodes.length,
+          hasMoreComments
+        }
+      })
     )
     hasNextPage = pageInfo.hasNextPage
     cursor = pageInfo.endCursor

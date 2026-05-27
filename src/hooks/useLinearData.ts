@@ -24,7 +24,7 @@ const readUploadedIssues = (): any[] => {
   return []
 }
 
-// Custom hook: prefer uploaded data from sessionStorage if present
+// API key wins when present; uploaded data is the fallback for no-key sessions.
 export const useLinearIssues = () => {
   const apiKey = useAppStore((s) => s.settings.linearApiKey)
   const uploadedIssues = readUploadedIssues()
@@ -33,12 +33,12 @@ export const useLinearIssues = () => {
   const query = useQuery({
     queryKey: ['linear-issues', apiKey],
     queryFn: () => fetchAllIssues(apiKey),
-    enabled: !!apiKey && !hasUploaded,
+    enabled: !!apiKey,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000
   })
 
-  if (hasUploaded) {
+  if (!apiKey && hasUploaded) {
     return { ...query, data: uploadedIssues, isLoading: false }
   }
   return query
@@ -62,11 +62,11 @@ export const useLinearMembers = () => {
   const query = useQuery({
     queryKey: ['linear-members', apiKey],
     queryFn: () => fetchMembers(apiKey),
-    enabled: !!apiKey && !hasUploaded,
+    enabled: !!apiKey,
     staleTime: 30 * 60 * 1000
   })
 
-  if (hasUploaded) {
+  if (!apiKey && hasUploaded) {
     const seen = new Map<string, { id: string; name: string; email: string }>()
     for (const issue of uploadedIssues) {
       const a = issue?.assignee

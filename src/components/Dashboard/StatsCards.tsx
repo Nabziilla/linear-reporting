@@ -20,11 +20,13 @@ const StatValue = styled(Typography)({ fontSize: '2rem', fontWeight: 700, lineHe
 
 const STATE_STATS: { type: StateType | 'total'; label: string; color: string }[] = [
   { type: 'total', label: 'Total Tickets', color: '#5E6AD2' },
-  { type: 'started', label: 'In Progress', color: STATE_TYPE_COLORS.started },
-  { type: 'unstarted', label: 'Todo', color: STATE_TYPE_COLORS.unstarted },
+  { type: 'triage', label: 'Triage', color: STATE_TYPE_COLORS.triage },
   { type: 'backlog', label: 'Backlog', color: STATE_TYPE_COLORS.backlog },
+  { type: 'unstarted', label: 'Todo', color: STATE_TYPE_COLORS.unstarted },
+  { type: 'started', label: 'In Progress', color: STATE_TYPE_COLORS.started },
   { type: 'completed', label: 'Done', color: STATE_TYPE_COLORS.completed },
-  { type: 'cancelled', label: 'Cancelled', color: STATE_TYPE_COLORS.cancelled }
+  { type: 'canceled', label: 'Cancelled', color: STATE_TYPE_COLORS.canceled },
+  { type: 'duplicate', label: 'Duplicate', color: STATE_TYPE_COLORS.duplicate }
 ]
 
 interface StatsCardsProps {

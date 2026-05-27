@@ -12,6 +12,7 @@ interface AppStore {
 
 const DEFAULT_FILTERS: TicketFilters = {
   stateTypes: [] as StateType[],
+  stateNames: [],
   priorities: [] as Priority[],
   teamIds: [],
   assigneeIds: [],

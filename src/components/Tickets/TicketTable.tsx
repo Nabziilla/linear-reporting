@@ -1,12 +1,30 @@
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, TablePagination, Chip, Typography, Box } from '@mui/material'
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, TablePagination, Chip, Typography, Box, Tooltip } from '@mui/material'
 import { styled } from '@mui/material/styles'
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'
 import { useEffect, useMemo, useState } from 'react'
 import { LinearIssue } from '../../types'
 import { STATE_TYPE_COLORS, PRIORITY_COLORS, PRIORITY_LABELS } from '../../constants'
 import dayjs from 'dayjs'
 
-type SortKey = 'identifier' | 'title' | 'state' | 'priority' | 'team' | 'assignee' | 'creator' | 'labels' | 'createdAt' | 'updatedAt' | 'timeInStatus'
+type SortKey = 'identifier' | 'title' | 'state' | 'priority' | 'team' | 'assignee' | 'creator' | 'labels' | 'createdAt' | 'updatedAt' | 'timeInStatus' | 'latestUpdate'
 type SortDir = 'asc' | 'desc'
+
+const stripMarkdown = (body: string): string =>
+  body
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/`{1,3}[^`]*`{1,3}/g, '')
+    .replace(/[*_>#~`]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const latestCommentOf = (issue: LinearIssue) => {
+  const comments = issue.comments ?? []
+  if (comments.length === 0) return null
+  return [...comments].sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )[0]
+}
 
 const IdentifierCell = styled(TableCell)({ width: 90, fontFamily: 'monospace', fontSize: '0.78rem', color: '#5E6AD2', fontWeight: 700 })
 const StyledTableRow = styled(TableRow)({ cursor: 'pointer', '&:hover': { backgroundColor: '#f8fafc' } })
@@ -44,6 +62,10 @@ const sortIssues = (issues: LinearIssue[], key: SortKey, dir: SortDir) => {
       av = computeStatusDays(a) ?? -1
       bv = computeStatusDays(b) ?? -1
     }
+    else if (key === 'latestUpdate') {
+      av = latestCommentOf(a)?.createdAt ?? ''
+      bv = latestCommentOf(b)?.createdAt ?? ''
+    }
     const cmp = av < bv ? -1 : av > bv ? 1 : 0
     return dir === 'asc' ? cmp : -cmp
   })
@@ -58,6 +80,7 @@ const COLUMNS: { id: SortKey; label: string }[] = [
   { id: 'identifier', label: 'ID' },
   { id: 'title', label: 'Title' },
   { id: 'state', label: 'Status' },
+  { id: 'latestUpdate', label: 'Latest Update' },
   { id: 'priority', label: 'Priority' },
   { id: 'team', label: 'Team' },
   { id: 'assignee', label: 'Assignee' },
@@ -114,6 +137,36 @@ export const TicketTable = ({ issues, onSelectIssue }: TicketTableProps) => {
               <TableCell>
                 <Chip label={issue.state.name} size="small"
                   sx={{ backgroundColor: STATE_TYPE_COLORS[issue.state.type] + '22', color: STATE_TYPE_COLORS[issue.state.type], fontWeight: 600, height: 20 }} />
+              </TableCell>
+              <TableCell sx={{ maxWidth: 320, minWidth: 220 }}>
+                {(() => {
+                  const latest = latestCommentOf(issue)
+                  const count = issue.commentCount ?? 0
+                  const countLabel = issue.hasMoreComments ? `${count}+` : `${count}`
+                  if (!latest) {
+                    return <Typography variant="caption" color="text.disabled">No comments</Typography>
+                  }
+                  const snippet = stripMarkdown(latest.body).slice(0, 90)
+                  const truncated = stripMarkdown(latest.body).length > 90
+                  return (
+                    <Tooltip title={stripMarkdown(latest.body)} placement="top" arrow>
+                      <Box display="flex" alignItems="center" gap={0.75}>
+                        <ChatBubbleOutlineIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
+                        <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums', minWidth: 18 }}>
+                          {countLabel}
+                        </Typography>
+                        <Box minWidth={0} sx={{ flex: 1 }}>
+                          <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {snippet}{truncated ? '…' : ''}
+                          </Typography>
+                          <Typography variant="caption" color="text.disabled" sx={{ display: 'block', fontSize: '0.65rem' }}>
+                            {latest.user?.name ?? 'Unknown'} · {dayjs(latest.createdAt).fromNow ? dayjs(latest.createdAt).format('D MMM') : dayjs(latest.createdAt).format('D MMM')}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Tooltip>
+                  )
+                })()}
               </TableCell>
               <TableCell>
                 <Chip label={PRIORITY_LABELS[issue.priority]} size="small"

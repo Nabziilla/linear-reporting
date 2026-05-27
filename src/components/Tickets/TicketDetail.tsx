@@ -1,4 +1,4 @@
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, Chip, Link, Divider } from '@mui/material'
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, Chip, Link, Divider, Stack, Avatar } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { LinearIssue } from '../../types'
@@ -30,7 +30,7 @@ export const TicketDetail = ({ issue, onClose }: TicketDetailProps) => {
   if (!issue) return null
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
           <Typography variant="caption" fontFamily="monospace" color="primary" fontWeight={700}>
@@ -114,6 +114,40 @@ export const TicketDetail = ({ issue, onClose }: TicketDetailProps) => {
             <Divider sx={{ my: 2 }} />
             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{issue.description}</Typography>
           </>
+        )}
+
+        <Divider sx={{ my: 2 }} />
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Comments {issue.commentCount ? `(${issue.hasMoreComments ? `${issue.commentCount}+` : issue.commentCount})` : ''}
+          </Typography>
+          {issue.hasMoreComments && (
+            <Link href={issue.url} target="_blank" rel="noreferrer" variant="caption">
+              See all in Linear
+            </Link>
+          )}
+        </Box>
+        {!issue.comments || issue.comments.length === 0 ? (
+          <Typography variant="body2" color="text.disabled">No comments yet.</Typography>
+        ) : (
+          <Stack spacing={1.5}>
+            {[...issue.comments]
+              .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+              .map((c) => (
+                <Box key={c.id} display="flex" gap={1.25}>
+                  <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem', bgcolor: '#5E6AD2' }}>
+                    {(c.user?.name ?? '?').slice(0, 1).toUpperCase()}
+                  </Avatar>
+                  <Box flex={1} minWidth={0}>
+                    <Box display="flex" alignItems="baseline" gap={1} mb={0.25}>
+                      <Typography variant="caption" fontWeight={700}>{c.user?.name ?? 'Unknown'}</Typography>
+                      <Typography variant="caption" color="text.secondary">{dayjs(c.createdAt).format('D MMM YYYY HH:mm')}</Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.body}</Typography>
+                  </Box>
+                </Box>
+              ))}
+          </Stack>
         )}
       </DialogContent>
 

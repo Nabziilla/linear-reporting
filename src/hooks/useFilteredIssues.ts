@@ -11,6 +11,9 @@ export const useFilteredIssues = () => {
       if (filters.stateTypes.length > 0 && !filters.stateTypes.includes(issue.state.type)) {
         return false
       }
+      if (filters.stateNames.length > 0 && !filters.stateNames.includes(issue.state.name)) {
+        return false
+      }
       if (filters.priorities.length > 0 && !filters.priorities.includes(issue.priority)) {
         return false
       }

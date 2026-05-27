@@ -1,4 +1,4 @@
-export type StateType = 'backlog' | 'unstarted' | 'started' | 'review' | 'qa' | 'completed' | 'cancelled'
+export type StateType = 'triage' | 'backlog' | 'unstarted' | 'started' | 'completed' | 'canceled' | 'duplicate'
 export type Priority = 0 | 1 | 2 | 3 | 4
 
 export interface LinearState {
@@ -32,6 +32,13 @@ export interface LinearProject {
   name: string
 }
 
+export interface LinearComment {
+  id: string
+  body: string
+  createdAt: string
+  user?: { name: string; email?: string } | null
+}
+
 export interface LinearIssue {
   id: string
   identifier: string
@@ -52,10 +59,14 @@ export interface LinearIssue {
   project?: LinearProject
   url: string
   timeInStatus?: number | string
+  comments?: LinearComment[]
+  commentCount?: number
+  hasMoreComments?: boolean
 }
 
 export interface TicketFilters {
   stateTypes: StateType[]
+  stateNames: string[]
   priorities: Priority[]
   teamIds: string[]
   assigneeIds: string[]

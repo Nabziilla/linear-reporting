@@ -8,12 +8,20 @@ import Papa from 'papaparse'
 const deriveStateTypeFromText = (raw: string): string | null => {
   const key = raw.trim().toLowerCase()
   if (!key) return null
-  if (key.includes('cancel')) return 'cancelled'
-  if (key.includes('review')) return 'review'
-  if (key.includes('qa') || key.includes('testing')) return 'qa'
-  if (key.includes('progress') || key.includes('started') || key.includes('doing')) return 'started'
+  if (key.includes('duplicate')) return 'duplicate'
+  if (key.includes('cancel')) return 'canceled'
+  if (key.includes('triage')) return 'triage'
+  if (
+    key.includes('review') ||
+    key.includes('qa') ||
+    key.includes('testing') ||
+    key.includes('progress') ||
+    key.includes('started') ||
+    key.includes('doing') ||
+    key.includes('ready for prod')
+  ) return 'started'
   if (key.includes('done') || key.includes('complete') || key.includes('closed') || key.includes('resolved')) return 'completed'
-  if (key.includes('backlog')) return 'backlog'
+  if (key.includes('backlog') || key.includes('shaping') || key.includes('discovery') || key.includes('ready for engg')) return 'backlog'
   if (key.includes('todo') || key.includes('to do') || key.includes('open') || key.includes('unstarted') || key.includes('new')) return 'unstarted'
   return null
 }

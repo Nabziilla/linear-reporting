@@ -1,16 +1,12 @@
-import { Box, Typography, Grid, Alert, Button, CircularProgress } from '@mui/material'
+import { useMemo, useState } from 'react'
+import { Box, Typography, Grid, CircularProgress, Divider } from '@mui/material'
 import { styled } from '@mui/material/styles'
-import { useNavigate } from 'react-router-dom'
-import { useAppStore } from '../../stores/useAppStore'
 import { useFilteredIssues } from '../../hooks/useFilteredIssues'
 import { StatsCards } from './StatsCards'
 import { StatusChart } from './StatusChart'
 import { PriorityChart } from './PriorityChart'
 import { RecentTickets } from './RecentTickets'
-import { NAV_ROUTES } from '../../constants'
-import { LinearLoginButton } from '../LinearLogin'
-import { LinearDataUpload } from '../LinearDataUpload'
-import { useState, useEffect } from 'react'
+import { TeamSummaryCards, ALL_TEAMS_KEY } from './TeamSummaryCards'
 
 const PageHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -27,25 +23,15 @@ const LoadingCenter = styled(Box)({
 })
 
 export const DashboardPage = () => {
-  const navigate = useNavigate()
-  const { issues, allIssues, isLoading } = useFilteredIssues()
+  const { allIssues, isLoading } = useFilteredIssues()
+  const [selectedTeam, setSelectedTeam] = useState<string>(ALL_TEAMS_KEY)
 
-  const [uploadedIssues, setUploadedIssues] = useState<any[] | null>(null)
+  const scopedIssues = useMemo(() => {
+    if (selectedTeam === ALL_TEAMS_KEY) return allIssues
+    return allIssues.filter((i) => i.team?.name === selectedTeam)
+  }, [allIssues, selectedTeam])
 
-  // Always read uploaded issues from sessionStorage on mount
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem('linear-upload-data')
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setUploadedIssues(parsed)
-        }
-      }
-    } catch {}
-  }, [])
-
-  if (isLoading && !uploadedIssues) {
+  if (isLoading) {
     return (
       <LoadingCenter>
         <CircularProgress />
@@ -54,65 +40,47 @@ export const DashboardPage = () => {
     )
   }
 
-  // Prefer uploaded issues if present
-  const dashboardIssues = uploadedIssues && uploadedIssues.length > 0 ? uploadedIssues : allIssues
-
-  // Debug: check for required fields in uploaded issues
-  let uploadError = null
-  if (uploadedIssues && uploadedIssues.length > 0) {
-    // Check first issue for required fields
-    const requiredFields = ['id', 'identifier', 'title', 'state', 'team']
-    const first = uploadedIssues[0]
-    for (const field of requiredFields) {
-      if (!(field in first)) {
-        uploadError = `Uploaded data is missing required field: ${field}`
-        break
-      }
-    }
-    // Check nested fields
-    if (!uploadError) {
-      if (!first.state || typeof first.state !== 'object' || !('name' in first.state)) {
-        uploadError = 'Uploaded data: missing or invalid state field'
-      }
-      if (!first.team || typeof first.team !== 'object' || !('name' in first.team)) {
-        uploadError = 'Uploaded data: missing or invalid team field'
-      }
-    }
-    // Debug log
-    // eslint-disable-next-line no-console
-    console.log('Uploaded issues:', uploadedIssues)
-  }
+  const lowerLabel = selectedTeam === ALL_TEAMS_KEY ? 'All Teams Overview' : `${selectedTeam} Details`
 
   return (
     <Box>
       <PageHeader>
         <Typography variant="h5">Dashboard</Typography>
         <Typography variant="body2" color="text.secondary">
-          {dashboardIssues.length} total tickets
+          {allIssues.length} total tickets
         </Typography>
-        <LinearLoginButton />
       </PageHeader>
 
-      <LinearDataUpload onData={setUploadedIssues} />
-
-      {uploadError && (
-        <Alert severity="error" sx={{ my: 2 }}>{uploadError}</Alert>
-      )}
-
+      <Typography variant="overline" color="text.secondary" display="block" mb={1}>
+        By Team — click a card to drill down
+      </Typography>
       <Box mb={3}>
-        <StatsCards issues={dashboardIssues} />
+        <TeamSummaryCards
+          issues={allIssues}
+          selectedTeam={selectedTeam}
+          onSelectTeam={setSelectedTeam}
+        />
+      </Box>
+
+      <Divider sx={{ mb: 3 }} />
+
+      <Typography variant="overline" color="text.secondary" display="block" mb={1}>
+        {lowerLabel} · {scopedIssues.length} tickets
+      </Typography>
+      <Box mb={3}>
+        <StatsCards issues={scopedIssues} />
       </Box>
 
       <Grid container spacing={3} mb={3}>
         <Grid item xs={12} md={6}>
-          <StatusChart issues={dashboardIssues} />
+          <StatusChart issues={scopedIssues} />
         </Grid>
         <Grid item xs={12} md={6}>
-          <PriorityChart issues={dashboardIssues} />
+          <PriorityChart issues={scopedIssues} />
         </Grid>
       </Grid>
 
-      <RecentTickets issues={dashboardIssues} />
+      <RecentTickets issues={scopedIssues} />
     </Box>
   )
 }

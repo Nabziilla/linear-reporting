@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Box, Card, CardContent, Typography, TextField, Button, Alert, CircularProgress, Divider, Link, Stack } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
@@ -5,8 +6,11 @@ import ErrorIcon from '@mui/icons-material/Error'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import { useAppStore } from '../../stores/useAppStore'
-import { LinearLoginButton } from '../LinearLogin'
+import { useLinearViewer } from '../../hooks/useLinearData'
+import { LinearDataUpload } from '../LinearDataUpload'
 
 const PageRoot = styled(Box)(({ theme }) => ({
   maxWidth: 600,
@@ -71,28 +75,117 @@ const ConnectionStatus = () => {
 }
 
 export const SettingsPage = () => {
-  const { settings, updateSettings } = useAppStore();
+  const { settings, updateSettings } = useAppStore()
+  const queryClient = useQueryClient()
+
+  const linearForm = useForm<LinearForm>({
+    resolver: zodResolver(linearSchema),
+    defaultValues: { linearApiKey: settings.linearApiKey }
+  })
+
   const anthropicForm = useForm<AnthropicForm>({
     resolver: zodResolver(anthropicSchema),
     defaultValues: { anthropicApiKey: settings.anthropicApiKey }
-  });
+  })
+
+  const refreshLinearData = () => {
+    queryClient.invalidateQueries({ queryKey: ['linear-viewer'] })
+    queryClient.invalidateQueries({ queryKey: ['linear-issues'] })
+    queryClient.invalidateQueries({ queryKey: ['linear-teams'] })
+    queryClient.invalidateQueries({ queryKey: ['linear-members'] })
+  }
+
+  const saveLinearKey = (values: LinearForm) => {
+    updateSettings({ linearApiKey: values.linearApiKey.trim() })
+    refreshLinearData()
+  }
 
   const saveAnthropicKey = (values: AnthropicForm) => {
-    updateSettings({ anthropicApiKey: values.anthropicApiKey });
-  };
+    updateSettings({ anthropicApiKey: values.anthropicApiKey.trim() })
+  }
+
+  const [uploadCount, setUploadCount] = useState<number>(() => {
+    try {
+      const raw = sessionStorage.getItem('linear-upload-data')
+      if (!raw) return 0
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed.length : 0
+    } catch {
+      return 0
+    }
+  })
+
+  useEffect(() => {
+    linearForm.reset({ linearApiKey: settings.linearApiKey })
+  }, [settings.linearApiKey, linearForm])
 
   return (
     <PageRoot>
       <Typography variant="h5">Settings</Typography>
+
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Linear Login</Typography>
+          <Typography variant="h6" gutterBottom>Linear API Key</Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            Login with your Linear account to connect and fetch your workspace data.
+            Paste a Linear personal API key to pull issues directly. Create one at{' '}
+            <Link href="https://linear.app/settings/account/security" target="_blank" rel="noreferrer">
+              linear.app → Settings → API
+            </Link>
+            .
           </Typography>
-          <LinearLoginButton />
+          <Divider sx={{ my: 2 }} />
+          <Box component="form" onSubmit={linearForm.handleSubmit(saveLinearKey)}>
+            <Stack spacing={2}>
+              <Controller
+                name="linearApiKey"
+                control={linearForm.control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Linear API Key"
+                    type="password"
+                    fullWidth
+                    error={!!linearForm.formState.errors.linearApiKey}
+                    helperText={linearForm.formState.errors.linearApiKey?.message ?? 'lin_api_xxxxxxxx'}
+                    autoComplete="off"
+                  />
+                )}
+              />
+              <Stack direction="row" spacing={1}>
+                <Button type="submit" variant="contained">Save Linear Key</Button>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={refreshLinearData}
+                  disabled={!settings.linearApiKey}
+                >
+                  Refresh data
+                </Button>
+              </Stack>
+              {settings.linearApiKey && <ConnectionStatus />}
+            </Stack>
+          </Box>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>Import from CSV / JSON</Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Optional. Uploaded data overrides API-fetched data while present in this browser session.
+            Use this for offline analysis or one-off exports from Linear.
+          </Typography>
+          <Divider sx={{ my: 2 }} />
+          <LinearDataUpload onData={(rows) => setUploadCount(rows.length)} />
+          {uploadCount > 0 && (
+            <Alert severity="info" variant="outlined" sx={{ mt: 1 }}>
+              {uploadCount} uploaded record{uploadCount === 1 ? '' : 's'} currently active. Clear to fall back to the API key.
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent>
           <Typography variant="h6" gutterBottom>AI Chat (Anthropic)</Typography>
@@ -124,16 +217,17 @@ export const SettingsPage = () => {
               {settings.anthropicApiKey && (
                 <Alert severity="success" variant="outlined">Anthropic key saved.</Alert>
               )}
-              <Button type="submit" variant="outlined">
-                Save Anthropic Key
-              </Button>
+              <Box>
+                <Button type="submit" variant="outlined">Save Anthropic Key</Button>
+              </Box>
             </Stack>
           </Box>
         </CardContent>
       </Card>
+
       <Alert severity="info" variant="outlined">
         Keys are stored in your browser&apos;s local storage only — never sent to any third party.
       </Alert>
     </PageRoot>
-  );
-};
+  )
+}
