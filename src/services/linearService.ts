@@ -8,6 +8,7 @@ const ISSUES_QUERY = `
         id identifier title description priority priorityLabel
         state { id name type color }
         assignee { id name email avatarUrl }
+        creator { id name email avatarUrl }
         team { id name key }
         createdAt updatedAt completedAt dueDate estimate url
         labels { nodes { name color } }
