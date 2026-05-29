@@ -8,6 +8,7 @@ import { useFilteredIssues } from '../../hooks/useFilteredIssues'
 import { TicketFilters } from './TicketFilters'
 import { TicketTable } from './TicketTable'
 import { TicketDetail } from './TicketDetail'
+import { QASummary } from './QASummary'
 import { LinearIssue } from '../../types'
 import { NAV_ROUTES } from '../../constants'
 
@@ -75,7 +76,10 @@ export const TicketsPage = () => {
               <Typography color="text.secondary">No tickets match the current filters.</Typography>
             </Box>
           ) : (
-            <TicketTable issues={issues} onSelectIssue={setSelectedIssue} />
+            <>
+              <TicketTable issues={issues} onSelectIssue={setSelectedIssue} />
+              <QASummary issues={issues} onSelectIssue={setSelectedIssue} />
+            </>
           )}
         </TablePanel>
       </PageRoot>

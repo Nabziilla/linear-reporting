@@ -3,7 +3,7 @@ import { styled } from '@mui/material/styles'
 import { useMemo } from 'react'
 import SearchIcon from '@mui/icons-material/Search'
 import { useAppStore } from '../../stores/useAppStore'
-import { useLinearTeams, useLinearMembers, useLinearIssues } from '../../hooks/useLinearData'
+import { useLinearTeams, useLinearIssues } from '../../hooks/useLinearData'
 import { ALL_STATE_TYPES, ALL_PRIORITIES, STATE_TYPE_COLORS, PRIORITY_LABELS } from '../../constants'
 import { StateType, Priority } from '../../types'
 
@@ -23,7 +23,6 @@ const SectionLabel = styled(Typography)(({ theme }) => ({
 export const TicketFilters = () => {
   const { filters, updateFilters, resetFilters } = useAppStore()
   const { data: teams = [] } = useLinearTeams()
-  const { data: allMembers = [] } = useLinearMembers()
   const { data: issues = [] } = useLinearIssues()
 
   // Derive creators from issues
@@ -61,30 +60,35 @@ export const TicketFilters = () => {
     !!filters.searchQuery
 
   const assigneeOptions = useMemo(() => {
-    if (!hasOtherFilter) return allMembers
-
+    const sortByName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)
     const wantedLabels = new Set(filters.labelNames.map((n) => n.trim().toLowerCase()))
     const q = filters.searchQuery.toLowerCase()
 
-    const matchingAssigneeIds = new Set<string>()
+    const seen = new Map<string, { id: string; name: string; email?: string }>()
     for (const issue of issues) {
-      if (filters.stateTypes.length > 0 && !filters.stateTypes.includes(issue.state.type)) continue
-      if (filters.stateNames.length > 0 && !filters.stateNames.includes(issue.state.name)) continue
-      if (filters.priorities.length > 0 && !filters.priorities.includes(issue.priority)) continue
-      if (filters.teamIds.length > 0 && !filters.teamIds.includes(issue.team.id)) continue
-      if (filters.creatorIds.length > 0 && (!issue.creator || !filters.creatorIds.includes(issue.creator.id))) continue
-      if (filters.labelNames.length > 0) {
-        const names = (issue.labels || []).map((l: any) => {
-          const n = typeof l === 'string' ? l : l?.name
-          return (n || '').trim().toLowerCase()
-        })
-        if (!names.some((n: string) => wantedLabels.has(n))) continue
+      if (hasOtherFilter) {
+        if (filters.stateTypes.length > 0 && !filters.stateTypes.includes(issue.state.type)) continue
+        if (filters.stateNames.length > 0 && !filters.stateNames.includes(issue.state.name)) continue
+        if (filters.priorities.length > 0 && !filters.priorities.includes(issue.priority)) continue
+        if (filters.teamIds.length > 0 && !filters.teamIds.includes(issue.team.id)) continue
+        if (filters.creatorIds.length > 0 && (!issue.creator || !filters.creatorIds.includes(issue.creator.id))) continue
+        if (filters.labelNames.length > 0) {
+          const names = (issue.labels || []).map((l: any) => {
+            const n = typeof l === 'string' ? l : l?.name
+            return (n || '').trim().toLowerCase()
+          })
+          if (!names.some((n: string) => wantedLabels.has(n))) continue
+        }
+        if (q && !issue.title.toLowerCase().includes(q) && !issue.identifier.toLowerCase().includes(q)) continue
       }
-      if (q && !issue.title.toLowerCase().includes(q) && !issue.identifier.toLowerCase().includes(q)) continue
-      if (issue.assignee?.id) matchingAssigneeIds.add(issue.assignee.id)
+      const a = issue.assignee
+      if (!a) continue
+      const id = a.id || a.email || a.name
+      if (!id || seen.has(id)) continue
+      seen.set(id, { id, name: a.name || id, email: a.email || '' })
     }
-    return allMembers.filter((m) => matchingAssigneeIds.has(m.id))
-  }, [hasOtherFilter, issues, filters.stateTypes, filters.stateNames, filters.priorities, filters.teamIds, filters.creatorIds, filters.labelNames, filters.searchQuery, allMembers])
+    return Array.from(seen.values()).sort(sortByName)
+  }, [hasOtherFilter, issues, filters.stateTypes, filters.stateNames, filters.priorities, filters.teamIds, filters.creatorIds, filters.labelNames, filters.searchQuery])
 
   const toggleStateName = (name: string) => {
     const next = filters.stateNames.includes(name)
@@ -207,7 +211,7 @@ export const TicketFilters = () => {
           size="small"
           options={assigneeOptions}
           getOptionLabel={(m) => m.name}
-          value={allMembers.filter((m) => filters.assigneeIds.includes(m.id))}
+          value={assigneeOptions.filter((m) => filters.assigneeIds.includes(m.id))}
           onChange={(_, selected) => updateFilters({ assigneeIds: selected.map((m) => m.id) })}
           renderInput={(params) => <TextField {...params} placeholder="All assignees" />}
           noOptionsText={hasOtherFilter ? 'No assignees match' : 'No assignees'}
