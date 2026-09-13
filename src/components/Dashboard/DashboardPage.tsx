@@ -7,6 +7,7 @@ import { StatusChart } from './StatusChart'
 import { PriorityChart } from './PriorityChart'
 import { RecentTickets } from './RecentTickets'
 import { TeamSummaryCards, ALL_TEAMS_KEY } from './TeamSummaryCards'
+import { QAActivity } from './QAActivity'
 
 const PageHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -69,6 +70,10 @@ export const DashboardPage = () => {
       </Typography>
       <Box mb={3}>
         <StatsCards issues={scopedIssues} />
+      </Box>
+
+      <Box mb={3}>
+        <QAActivity issues={allIssues} />
       </Box>
 
       <Grid container spacing={3} mb={3}>
