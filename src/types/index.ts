@@ -81,6 +81,53 @@ export interface TicketFilters {
   searchQuery: string
 }
 
+export type QaPeriod = 'day' | 'week' | 'month'
+
+// A ticket currently sitting in the QA state, enriched from its history.
+export interface QaQueueItem {
+  id: string
+  identifier: string
+  title: string
+  url: string
+  priority: Priority
+  priorityLabel: string
+  teamKey: string
+  teamName: string
+  assigneeName: string | null
+  stateName: string
+  createdAt: string
+  updatedAt: string
+  qaEnteredAt: string // ISO — when it last entered QA (falls back to createdAt)
+  qaEnteredApprox: boolean // true when no explicit QA-entry transition was found
+  qaAgeMs: number // now - qaEnteredAt
+  qaBounceCount: number // how many times it has been sent to QA (>1 = bounced back before)
+  enteredFromState: string | null
+  updatedInLast24h: boolean
+  enteredQaInLast24h: boolean
+}
+
+// A single QA transition (in or out) that happened within the reporting period.
+export interface QaExitItem {
+  id: string
+  identifier: string
+  title: string
+  url: string
+  teamKey: string
+  assigneeName: string | null
+  at: string
+  toState: string
+  passed: boolean // true = moved forward, false = bounced back
+}
+
+export interface QaActivity {
+  entered: number
+  exited: number
+  passed: number
+  bounced: number
+  exitedItems: QaExitItem[]
+  perDay: { date: string; entered: number; passed: number; bounced: number }[]
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string

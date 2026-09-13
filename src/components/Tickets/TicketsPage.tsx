@@ -1,20 +1,18 @@
 import { useState } from 'react'
-import { Box, Typography, Alert, Button, CircularProgress, Drawer } from '@mui/material'
+import { Box, Typography, Button, CircularProgress, Drawer } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import FilterListIcon from '@mui/icons-material/FilterList'
-import { useNavigate } from 'react-router-dom'
-import { useAppStore } from '../../stores/useAppStore'
 import { useFilteredIssues } from '../../hooks/useFilteredIssues'
 import { TicketFilters } from './TicketFilters'
 import { TicketTable } from './TicketTable'
 import { TicketDetail } from './TicketDetail'
 import { QASummary } from './QASummary'
 import { LinearIssue } from '../../types'
-import { NAV_ROUTES } from '../../constants'
+import { LinearConnectionNotice } from '../LinearConnectionNotice'
 
 const FILTER_WIDTH = 260
 
-const PageRoot = styled(Box)({ display: 'flex', height: '100%', gap: 0 })
+const PageRoot = styled(Box)({ display: 'flex', flex: 1, minHeight: 0, gap: 0 })
 
 const FilterPanel = styled(Box)(({ theme }) => ({
   width: FILTER_WIDTH,
@@ -26,7 +24,9 @@ const FilterPanel = styled(Box)(({ theme }) => ({
   '@media (min-width: 900px)': { display: 'block' }
 }))
 
-const TablePanel = styled(Box)({ flex: 1, overflow: 'auto' })
+// Single scroll container for the ticket table + pagination + QA snapshot,
+// so they scroll together as one region (no nested scroll fighting).
+const TablePanel = styled(Box)({ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto' })
 
 const PageHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -37,14 +37,12 @@ const PageHeader = styled(Box)(({ theme }) => ({
 }))
 
 export const TicketsPage = () => {
-  const navigate = useNavigate()
-
-  const { issues, allIssues, isLoading } = useFilteredIssues()
+  const { issues, allIssues, isLoading, isError, error, hasApiKey, hasUploadedData } = useFilteredIssues()
   const [selectedIssue, setSelectedIssue] = useState<LinearIssue | null>(null)
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
 
   return (
-    <Box display="flex" flexDirection="column" height="100%" sx={{ m: -3 }}>
+    <Box display="flex" flexDirection="column" height="100%" sx={{ m: -3, minHeight: 0, overflow: 'hidden' }}>
       <PageHeader>
         <Box>
           <Typography variant="h6">Tickets</Typography>
@@ -70,6 +68,16 @@ export const TicketsPage = () => {
           {isLoading ? (
             <Box display="flex" justifyContent="center" alignItems="center" height={300}>
               <CircularProgress />
+            </Box>
+          ) : isError || allIssues.length === 0 ? (
+            <Box p={2}>
+              <LinearConnectionNotice
+                hasApiKey={hasApiKey}
+                hasUploadedData={hasUploadedData}
+                isError={isError}
+                error={error}
+                isEmpty={allIssues.length === 0}
+              />
             </Box>
           ) : issues.length === 0 ? (
             <Box display="flex" justifyContent="center" alignItems="center" height={300}>

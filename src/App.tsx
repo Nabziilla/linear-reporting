@@ -5,12 +5,13 @@ import { AppLayout } from './components/Layout/AppLayout'
 import { DashboardPage } from './components/Dashboard/DashboardPage'
 import { TicketsPage } from './components/Tickets/TicketsPage'
 import { ReportsPage } from './components/Reports/ReportsPage'
+import { QAReportPage } from './components/QAReport/QAReportPage'
 import { SettingsPage } from './components/Settings/SettingsPage'
 import { LogsPage } from './components/LogsPage'
 
 import { theme } from './theme'
 import { NAV_ROUTES } from './constants'
-import { LinearLoginButton, LinearOAuthCallback } from './components/LinearLogin'
+import { LinearOAuthCallback } from './components/LinearLogin'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +38,7 @@ const App = () => (
                   <Route path={NAV_ROUTES.DASHBOARD} element={<DashboardPage />} />
                   <Route path={NAV_ROUTES.TICKETS} element={<TicketsPage />} />
                   <Route path={NAV_ROUTES.REPORTS} element={<ReportsPage />} />
+                  <Route path={NAV_ROUTES.QA_REPORT} element={<QAReportPage />} />
                   <Route path={NAV_ROUTES.SETTINGS} element={<SettingsPage />} />
                   <Route path="/logs" element={<LogsPage />} />
                 </Routes>

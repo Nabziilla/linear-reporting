@@ -2,9 +2,21 @@ import { useMemo } from 'react'
 import { useLinearIssues } from './useLinearData'
 import { useAppStore } from '../stores/useAppStore'
 
+const hasUploadedData = (): boolean => {
+  try {
+    const raw = sessionStorage.getItem('linear-upload-data')
+    if (!raw) return false
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) && parsed.length > 0
+  } catch {
+    return false
+  }
+}
+
 export const useFilteredIssues = () => {
-  const { data: issues = [], isLoading, refetch } = useLinearIssues()
+  const { data: issues = [], isLoading, isError, error, refetch } = useLinearIssues()
   const filters = useAppStore((s) => s.filters)
+  const hasApiKey = useAppStore((s) => !!s.settings.linearApiKey)
 
   const filtered = useMemo(() => {
     return issues.filter((issue) => {
@@ -83,5 +95,14 @@ export const useFilteredIssues = () => {
     })
   }, [issues, filters])
 
-  return { issues: filtered, allIssues: issues, isLoading, refetch }
+  return {
+    issues: filtered,
+    allIssues: issues,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    hasApiKey,
+    hasUploadedData: hasUploadedData()
+  }
 }

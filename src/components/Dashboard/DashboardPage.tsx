@@ -7,6 +7,7 @@ import { StatusChart } from './StatusChart'
 import { PriorityChart } from './PriorityChart'
 import { RecentTickets } from './RecentTickets'
 import { TeamSummaryCards, ALL_TEAMS_KEY } from './TeamSummaryCards'
+import { LinearConnectionNotice } from '../LinearConnectionNotice'
 
 const PageHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -23,7 +24,7 @@ const LoadingCenter = styled(Box)({
 })
 
 export const DashboardPage = () => {
-  const { allIssues, isLoading } = useFilteredIssues()
+  const { allIssues, isLoading, isError, error, hasApiKey, hasUploadedData } = useFilteredIssues()
   const [selectedTeam, setSelectedTeam] = useState<string>(ALL_TEAMS_KEY)
 
   const scopedIssues = useMemo(() => {
@@ -41,6 +42,24 @@ export const DashboardPage = () => {
   }
 
   const lowerLabel = selectedTeam === ALL_TEAMS_KEY ? 'All Teams Overview' : `${selectedTeam} Details`
+  const isEmpty = allIssues.length === 0
+
+  if (isError || isEmpty) {
+    return (
+      <Box>
+        <PageHeader>
+          <Typography variant="h5">Dashboard</Typography>
+        </PageHeader>
+        <LinearConnectionNotice
+          hasApiKey={hasApiKey}
+          hasUploadedData={hasUploadedData}
+          isError={isError}
+          error={error}
+          isEmpty={isEmpty}
+        />
+      </Box>
+    )
+  }
 
   return (
     <Box>

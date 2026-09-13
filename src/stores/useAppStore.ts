@@ -27,10 +27,17 @@ const DEFAULT_FILTERS: TicketFilters = {
   searchQuery: ''
 }
 
+// A saved key in localStorage always wins; the env var (.env.local) is the fallback
+// so the app works out of the box without pasting a key into Settings.
+const initialLinearKey =
+  localStorage.getItem(STORAGE_KEYS.LINEAR_API_KEY) || import.meta.env.VITE_LINEAR_API_KEY || ''
+const initialAnthropicKey =
+  localStorage.getItem(STORAGE_KEYS.ANTHROPIC_API_KEY) || import.meta.env.VITE_ANTHROPIC_API_KEY || ''
+
 export const useAppStore = create<AppStore>((set) => ({
   settings: {
-    linearApiKey: localStorage.getItem(STORAGE_KEYS.LINEAR_API_KEY) ?? '',
-    anthropicApiKey: localStorage.getItem(STORAGE_KEYS.ANTHROPIC_API_KEY) ?? ''
+    linearApiKey: initialLinearKey,
+    anthropicApiKey: initialAnthropicKey
   },
   filters: DEFAULT_FILTERS,
 

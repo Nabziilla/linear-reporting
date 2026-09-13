@@ -55,7 +55,7 @@ const ISSUE_COMMENTS_QUERY = `
   }
 `
 
-const executeQuery = async (apiKey: string, query: string, variables?: object) => {
+export const executeQuery = async (apiKey: string, query: string, variables?: object) => {
   const response = await fetch(LINEAR_GRAPHQL_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: apiKey },

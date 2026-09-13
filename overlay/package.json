@@ -1,0 +1,13 @@
+{
+  "name": "linear-overlay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Floating desktop overlay showing high-level Linear ticket numbers.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^32.2.0"
+  }
+}

@@ -1,11 +1,11 @@
-import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider, Chip } from '@mui/material'
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, Box, Typography, Divider } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber'
 import AssessmentIcon from '@mui/icons-material/Assessment'
+import ScienceIcon from '@mui/icons-material/Science'
 import SettingsIcon from '@mui/icons-material/Settings'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useLinearViewer } from '../../hooks/useLinearData'
 import { NAV_ROUTES } from '../../constants'
 
 const DRAWER_WIDTH = 240
@@ -27,6 +27,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard', path: NAV_ROUTES.DASHBOARD, icon: <DashboardIcon /> },
   { label: 'Tickets', path: NAV_ROUTES.TICKETS, icon: <ConfirmationNumberIcon /> },
   { label: 'Reports', path: NAV_ROUTES.REPORTS, icon: <AssessmentIcon /> },
+  { label: 'QA Report', path: NAV_ROUTES.QA_REPORT, icon: <ScienceIcon /> },
   { label: 'Settings', path: NAV_ROUTES.SETTINGS, icon: <SettingsIcon /> },
   { label: 'Logs', path: '/logs', icon: <AssessmentIcon /> }
 ]

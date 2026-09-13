@@ -1,0 +1,445 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  :root { --muted: #94a3b8; --text: #f1f5f9; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: transparent; overflow: hidden; user-select: none; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; padding: 6px; }
+
+  .panel {
+    height: calc(100vh - 12px); border-radius: 18px; padding: 11px 14px 10px;
+    display: flex; flex-direction: column;
+    background: linear-gradient(160deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.88));
+    -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    color: var(--text);
+  }
+
+  .bar { -webkit-app-region: drag; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .brand { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #5E6AD2; box-shadow: 0 0 10px rgba(94, 106, 210, 0.9); flex-shrink: 0; }
+  .title { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: clip; min-width: 0; }
+  .fdot { color: #c7d2fe; background: rgba(94,106,210,0.32); border-color: rgba(94,106,210,0.5); }
+  .fdot:hover { background: rgba(94,106,210,0.5); }
+  .spacer { flex: 1; }
+  .updated { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
+  .btns { -webkit-app-region: no-drag; display: flex; gap: 4px; flex-shrink: 0; }
+  .btn { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; cursor: pointer; color: var(--muted); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.06); font-size: 12px; line-height: 1; transition: all 0.15s ease; }
+  .btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.12); }
+  .btn.on { color: var(--text); background: rgba(94, 106, 210, 0.35); border-color: rgba(94, 106, 210, 0.5); }
+  .btn.spin svg { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .cards { display: grid; gap: 8px; flex: 1; }
+  .card { position: relative; border-radius: 10px; padding: 7px 8px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); display: flex; flex-direction: column; justify-content: center; gap: 2px; overflow: hidden; cursor: pointer; transition: background 0.15s ease, transform 0.15s ease; }
+  .card:hover { background: rgba(255, 255, 255, 0.07); transform: translateY(-1px); }
+  .card .go { position: absolute; top: 7px; right: 8px; color: var(--muted); opacity: 0; transition: opacity 0.12s ease; font-size: 11px; line-height: 1; }
+  .card:hover .go { opacity: 0.85; }
+  .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .value { font-size: 22px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--accent); }
+  .label { font-size: 8.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .sub { font-size: 8.5px; color: var(--muted); opacity: 0.75; margin-top: 1px; white-space: nowrap; }
+  .loading .value { opacity: 0.35; }
+
+  /* Settings */
+  #settings { flex: 1; min-height: 0; display: none; flex-direction: column; }
+  body.settings #settings { display: flex; }
+  body.settings .cards { display: none; }
+  .setHead { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .grouplist { -webkit-app-region: no-drag; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 4px; }
+  .grouplist::-webkit-scrollbar { width: 7px; }
+  .grouplist::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 4px; }
+  .grouplist::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+
+  .sectlabel { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #cbd5e1; margin: 2px 2px 0; display: flex; gap: 6px; align-items: baseline; }
+  .sectlabel .note { font-weight: 500; letter-spacing: 0.02em; text-transform: none; color: var(--muted); }
+  .sectlabel.spaced { margin-top: 8px; }
+
+  .fchips { display: flex; flex-wrap: wrap; gap: 5px; padding: 1px 2px 2px; }
+  .fchip { -webkit-app-region: no-drag; display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; color: #c7d2fe; background: rgba(94,106,210,0.25); border: 1px solid rgba(94,106,210,0.45); border-radius: 8px; padding: 3px 6px 3px 8px; }
+  .fchip .x { cursor: pointer; color: #a5b4fc; font-size: 11px; }
+  .fchip .x:hover { color: #fff; }
+  .fnone { font-size: 10px; color: var(--muted); padding: 2px 4px; }
+
+  .tick { width: 15px; height: 15px; border-radius: 5px; border: 1.5px solid rgba(255,255,255,0.28); flex-shrink: 0; display: grid; place-items: center; font-size: 10px; color: #0b1220; }
+  .group { display: flex; flex-direction: column; }
+  .ghead { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 9px; cursor: pointer; background: rgba(255,255,255,0.05); transition: background 0.12s ease; }
+  .ghead:hover { background: rgba(255,255,255,0.09); }
+  .gname { font-size: 10px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text); }
+  .gcount { font-size: 9px; font-weight: 600; color: var(--muted); background: rgba(255,255,255,0.09); border-radius: 10px; padding: 1px 7px; }
+  .chev { margin-left: auto; color: var(--muted); font-size: 10px; transition: transform 0.15s ease; }
+  .group.collapsed .chev { transform: rotate(-90deg); }
+  .group.collapsed .glist { display: none; }
+  .glist { display: flex; flex-direction: column; gap: 4px; padding: 5px 2px 2px; }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .pill { -webkit-app-region: no-drag; cursor: pointer; font-size: 10px; font-weight: 600; color: var(--text); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 5px 9px; transition: all 0.12s ease; }
+  .pill:hover { background: rgba(255,255,255,0.1); }
+  .pill.on { background: rgba(94,106,210,0.4); border-color: rgba(94,106,210,0.6); color: #fff; }
+
+  .opt { display: flex; align-items: center; gap: 9px; cursor: pointer; padding: 6px 9px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); transition: background 0.12s ease, border-color 0.12s ease; }
+  .opt:hover { background: rgba(255,255,255,0.08); }
+  .opt.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
+  .opt.active .tick { background: var(--accent); border-color: var(--accent); }
+  .ometa { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+  .oname { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .odesc { font-size: 10px; color: #b4c0d0; line-height: 1.15; }
+  .opt.disabled { opacity: 0.4; pointer-events: none; }
+  .opt.radio .tick { border-radius: 50%; }
+
+  .lsearch, .fsearch { -webkit-app-region: no-drag; width: 100%; box-sizing: border-box; margin-bottom: 6px; padding: 6px 9px; border-radius: 8px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.1); color: var(--text); font-size: 11px; outline: none; }
+  .lsearch::placeholder, .fsearch::placeholder { color: var(--muted); }
+  .lsearch:focus, .fsearch:focus { border-color: rgba(94,106,210,0.6); }
+  .lrows, .frows { display: flex; flex-direction: column; gap: 4px; }
+  .lnote { font-size: 10px; color: var(--muted); padding: 5px 6px; }
+
+  .setFoot { display: flex; justify-content: flex-end; margin-top: 8px; -webkit-app-region: no-drag; }
+  #done { font-size: 11px; font-weight: 600; color: var(--text); background: rgba(94,106,210,0.35); border: 1px solid rgba(94,106,210,0.5); border-radius: 8px; padding: 5px 14px; cursor: pointer; }
+  #done:hover { background: rgba(94,106,210,0.55); }
+
+  #error { display: none; flex: 1; align-items: center; justify-content: center; text-align: center; font-size: 11px; color: #f87171; padding: 0 8px; line-height: 1.4; }
+  body.errored .cards { display: none; }
+  body.errored #error { display: flex; }
+</style>
+</head>
+<body class="loading">
+  <div class="panel">
+    <div class="bar">
+      <div class="brand"><span class="dot"></span><span class="title" id="barTitle">Linear</span></div>
+      <div class="spacer"></div>
+      <span class="updated" id="updated">—</span>
+      <div class="btns">
+        <div class="btn fdot" id="fdot" title="Filter active — click to view/edit" hidden>⧩</div>
+        <div class="btn" id="settingsBtn" title="Settings">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <div class="btn" id="refresh" title="Refresh">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </div>
+        <div class="btn" id="close" title="Close">✕</div>
+      </div>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <div id="settings">
+      <div class="setHead">Settings</div>
+      <div class="grouplist" id="groups"></div>
+      <div class="setFoot"><button id="done">Done</button></div>
+    </div>
+
+    <div id="error"></div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id)
+
+  // Fixed metric boxes. `group` drives the settings dropdowns.
+  const CATALOG = [
+    { key: 'open',        label: 'Open',        sub: 'active',       desc: 'Active — not done or cancelled', group: 'status',   color: '#60a5fa' },
+    { key: 'inProgress',  label: 'In Progress', sub: 'being worked', desc: 'In the "In Progress" state',      group: 'status',   color: '#fb923c' },
+    { key: 'inQa',        label: 'In QA',       sub: 'testing',      desc: 'In the "In QA" state',            group: 'status',   color: '#a78bfa' },
+    { key: 'inReview',    label: 'In Review',   sub: 'code review',  desc: 'In the "In Review" state',        group: 'status',   color: '#22d3ee' },
+    { key: 'triage',      label: 'Triage',      sub: 'needs triage', desc: 'Awaiting triage',                 group: 'status',   color: '#eab308' },
+    { key: 'backlog',     label: 'Backlog',     sub: 'queued',       desc: 'In the backlog',                  group: 'status',   color: '#94a3b8' },
+    { key: 'urgent',      label: 'Urgent',      sub: 'open P1',      desc: 'Open Urgent (P1) tickets',        group: 'priority', color: '#f87171' },
+    { key: 'aging',       label: 'Aging',       sub: 'in QA 3d+',    desc: 'In QA for 3+ days',               group: 'flow',     color: '#34d399', alertColor: '#f87171' },
+    { key: 'doneWeek',    label: 'Done 7d',     sub: 'completed',    desc: 'Completed in the last 7 days',    group: 'flow',     color: '#34d399' },
+    { key: 'total',       label: 'Total',       sub: 'all tickets',  desc: 'All tickets (within filter)',     group: 'overview', color: '#cbd5e1' }
+  ]
+  const GROUPS = [
+    { key: 'status',   label: 'Status' },
+    { key: 'priority', label: 'Priority' },
+    { key: 'flow',     label: 'QA & Throughput' },
+    { key: 'overview', label: 'Overview' }
+  ]
+  const PRIORITIES = [
+    { v: 1, name: 'Urgent' }, { v: 2, name: 'High' }, { v: 3, name: 'Medium' }, { v: 4, name: 'Low' }, { v: 0, name: 'No priority' }
+  ]
+  const BY_KEY = Object.fromEntries(CATALOG.map((c) => [c.key, c]))
+  const DEFAULT = ['open', 'inProgress', 'inQa', 'aging']
+  const MAX = 6
+  const ALL_GROUPS = ['fpriority', 'fteam', 'flabel', 'status', 'priority', 'flow', 'overview', 'labels']
+  const CHROME = 40, BOX = 66, GAP = 7
+
+  let selected = loadJSON('overlay.metrics', DEFAULT).filter((k) => BY_KEY[k] || String(k).startsWith('label:'))
+  if (!selected.length) selected = [...DEFAULT]
+  let filter = normalizeFilter(loadJSON('overlay.filter', {}))
+  let latest = null
+
+  function normalizeFilter(f) {
+    f = f || {}
+    const arr = (v) => v == null ? [] : Array.isArray(v) ? v : [v]
+    return { teams: arr(f.teams).concat(arr(f.team)), priorities: arr(f.priorities).concat(arr(f.priority)), labels: arr(f.labels).concat(arr(f.label)) }
+  }
+  const FACET_KEY = { team: 'teams', priority: 'priorities', label: 'labels' }
+  let settingsOpen = false
+  let labelQuery = ''
+  let filterLabelQuery = ''
+  const collapsed = new Set(ALL_GROUPS) // all dropdowns collapsed by default
+
+  function loadJSON(k, fallback) { try { const r = localStorage.getItem(k); return r ? JSON.parse(r) : fallback } catch { return fallback } }
+  function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch {} }
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+  const ord = (k) => { const i = CATALOG.findIndex((c) => c.key === k); return i >= 0 ? i : CATALOG.length }
+  const labelLookup = () => { const m = {}; if (latest && latest.labels) for (const l of latest.labels) m[l.name] = l; return m }
+  const cleanFilter = () => { const f = {}; if (filter.teams.length) f.teams = filter.teams; if (filter.priorities.length) f.priorities = filter.priorities; if (filter.labels.length) f.labels = filter.labels; return f }
+  const priorityName = (v) => (PRIORITIES.find((p) => p.v === v) || {}).name || ('P' + v)
+  const filterActive = () => !!(filter.teams.length || filter.priorities.length || filter.labels.length)
+
+  // ---- Build a Linear deep-link for a box (status/label condition + active filter) ----
+  const ORG = 'hapana'
+  const OPEN_COND = { state: { type: { in: ['triage', 'backlog', 'unstarted', 'started'] } } }
+  function boxConditions(key) {
+    if (key.startsWith('label:')) return [OPEN_COND, { labels: { name: { in: [key.slice(6)] } } }]
+    switch (key) {
+      case 'open': return [OPEN_COND]
+      case 'inProgress': return [{ state: { name: { eq: 'In Progress' } } }]
+      case 'inQa': return [{ state: { name: { eq: 'In QA' } } }]
+      case 'inReview': return [{ state: { name: { eq: 'In Review' } } }]
+      case 'triage': return [{ state: { type: { eq: 'triage' } } }]
+      case 'backlog': return [{ state: { type: { eq: 'backlog' } } }]
+      case 'urgent': return [OPEN_COND, { priority: { eq: 1 } }]
+      case 'aging': return [{ state: { name: { eq: 'In QA' } } }] // note: 3d+ age can't be a URL filter
+      case 'doneWeek': return [{ state: { type: { eq: 'completed' } } }] // note: 7d window can't be a URL filter
+      case 'total': return []
+      default: return []
+    }
+  }
+  function buildLinearUrl(key) {
+    const conds = boxConditions(key)
+    if (filter.priorities.length) conds.push({ priority: { in: filter.priorities } })
+    if (filter.labels.length) conds.push({ labels: { name: { in: filter.labels } } })
+    if (filter.teams.length > 1) conds.push({ team: { key: { in: filter.teams } } })
+    const teamKey = filter.teams[0] || (latest && latest.teams && latest.teams[0] && latest.teams[0].key) || 'MEM'
+    const obj = conds.length ? { and: conds } : {}
+    const b64 = btoa(JSON.stringify(obj))
+    return `https://linear.app/${ORG}/team/${teamKey}/all?filter=${b64}`
+  }
+
+  function applySize() {
+    if (settingsOpen) { window.overlayAPI.resize(360, 430); return }
+    const n = Math.max(1, selected.length)
+    const w = Math.max(212, CHROME + n * BOX + (n - 1) * GAP) // floor so the header never overlaps
+    window.overlayAPI.resize(w, 134)
+  }
+
+  // ---- Cards ----
+  function renderCards() {
+    const n = Math.max(1, selected.length)
+    const el = $('cards')
+    el.style.gridTemplateColumns = `repeat(${n}, 1fr)`
+    const lm = labelLookup()
+    el.innerHTML = selected.map((key) => {
+      let value = null, accent = '#94a3b8', label = key, sub = ''
+      if (String(key).startsWith('label:')) {
+        const name = key.slice(6); const l = lm[name]
+        value = l ? l.open : (latest ? 0 : null); accent = (l && l.color) || '#94a3b8'; label = name; sub = 'label · open'
+      } else {
+        const c = BY_KEY[key]; if (!c) return ''
+        const v = latest ? latest[key] : null
+        const alert = key === 'aging' && v > 0
+        accent = alert && c.alertColor ? c.alertColor : c.color; value = v; label = c.label
+        sub = (key === 'aging' && latest) ? `in QA ${latest.agingThresholdDays}d+` : c.sub
+      }
+      return `<div class="card" data-key="${esc(key)}" style="--accent:${accent}" title="Open “${esc(label)}” in Linear">
+        <span class="go">↗</span>
+        <div class="value">${value == null ? '–' : value}</div>
+        <div><div class="label">${esc(label)}</div><div class="sub">${esc(sub)}</div></div>
+      </div>`
+    }).join('')
+  }
+
+  // Filters are hidden from the widget face; a small header dot signals one is active.
+  // (Full, editable filter chips still live in Settings.)
+  function renderActiveFilters() {
+    const dot = $('fdot')
+    if (dot) dot.hidden = !filterActive()
+  }
+
+  // ---- Settings ----
+  function groupHead(key, name, count, total) {
+    return `<div class="ghead" data-group="${key}"><span class="gname">${name}</span><span class="gcount">${count}${total != null ? '/' + total : ''}</span><span class="chev">▾</span></div>`
+  }
+  function optRow(c, atMax) {
+    const active = selected.includes(c.key); const disabled = !active && atMax
+    return `<div class="opt ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}" data-key="${c.key}" style="--accent:${c.color}">
+      <span class="tick">${active ? '✓' : ''}</span>
+      <span class="ometa"><span class="oname">${c.label}</span><span class="odesc">${c.desc}</span></span></div>`
+  }
+
+  function renderChips() {
+    const atMax = selected.length >= MAX
+    const cc = (g) => collapsed.has(g) ? 'collapsed' : ''
+    const teams = (latest && latest.teams) || []
+
+    // Active filter chips (any-of within a facet).
+    const chips = []
+    filter.teams.forEach((k) => chips.push(`<span class="fchip">Team: ${esc(k)}<span class="x" data-facet="team" data-val="${esc(k)}">✕</span></span>`))
+    filter.priorities.forEach((p) => chips.push(`<span class="fchip">${esc(priorityName(p))}<span class="x" data-facet="priority" data-val="${p}">✕</span></span>`))
+    filter.labels.forEach((n) => chips.push(`<span class="fchip">${esc(n)}<span class="x" data-facet="label" data-val="${esc(n)}">✕</span></span>`))
+    const chipsHtml = chips.length ? chips.join('') : `<span class="fnone">Whole workspace — no filter</span>`
+
+    const filterHtml = `
+      <div class="sectlabel">Filter <span class="note">rescopes every box · pick any of</span></div>
+      <div class="fchips">${chipsHtml}</div>
+      <div class="group ${cc('fpriority')}" data-group="fpriority">
+        ${groupHead('fpriority', 'Priority', filter.priorities.length, null)}
+        <div class="glist"><div class="pills">${PRIORITIES.map((p) => `<span class="pill ${filter.priorities.includes(p.v) ? 'on' : ''}" data-fpriority="${p.v}">${p.name}</span>`).join('')}</div></div>
+      </div>
+      <div class="group ${cc('fteam')}" data-group="fteam">
+        ${groupHead('fteam', 'Team', filter.teams.length, null)}
+        <div class="glist"><div class="pills">${teams.length ? teams.map((t) => `<span class="pill ${filter.teams.includes(t.key) ? 'on' : ''}" data-fteam="${esc(t.key)}" title="${esc(t.name)}">${esc(t.key)} · ${t.open}</span>`).join('') : '<span class="lnote">Loading…</span>'}</div></div>
+      </div>
+      <div class="group ${cc('flabel')}" data-group="flabel">
+        ${groupHead('flabel', 'Label', filter.labels.length, null)}
+        <div class="glist"><input class="fsearch" type="text" placeholder="Search labels…" spellcheck="false" /><div class="frows" id="frows"></div></div>
+      </div>`
+
+    // Box picker groups.
+    const boxGroups = GROUPS.map((g) => {
+      const items = CATALOG.filter((c) => c.group === g.key)
+      const count = items.filter((c) => selected.includes(c.key)).length
+      return `<div class="group ${cc(g.key)}" data-group="${g.key}">${groupHead(g.key, g.label, count, items.length)}<div class="glist">${items.map((c) => optRow(c, atMax)).join('')}</div></div>`
+    }).join('')
+
+    const selLabels = selected.filter((k) => String(k).startsWith('label:')).length
+    const totalLabels = latest && latest.labels ? latest.labels.length : 0
+    const labelsGroup = `<div class="group ${cc('labels')}" data-group="labels">
+      ${groupHead('labels', 'Labels', selLabels, totalLabels || null)}
+      <div class="glist"><input class="lsearch" type="text" placeholder="Search labels…" spellcheck="false" /><div class="lrows" id="lrows"></div></div></div>`
+
+    $('groups').innerHTML = filterHtml
+      + `<div class="sectlabel spaced">Boxes <span class="note">${selected.length}/${MAX} shown · pick what to display</span></div>`
+      + boxGroups + labelsGroup
+
+    const ls = $('groups').querySelector('.lsearch'); if (ls) ls.value = labelQuery
+    const fs = $('groups').querySelector('.fsearch'); if (fs) fs.value = filterLabelQuery
+    renderLabelRows()
+    renderFilterLabelRows()
+  }
+
+  function renderLabelRows() {
+    const box = $('lrows'); if (!box) return
+    const atMax = selected.length >= MAX
+    const list = (latest && latest.labels) || []
+    if (!list.length) { box.innerHTML = `<div class="lnote">No label data yet — hit ↻.</div>`; return }
+    const q = labelQuery
+    const filtered = q ? list.filter((l) => l.name.toLowerCase().includes(q)) : list
+    const shown = filtered.slice(0, 60)
+    let html = shown.map((l) => {
+      const key = 'label:' + l.name; const active = selected.includes(key); const disabled = !active && atMax; const idx = list.indexOf(l)
+      return `<div class="opt ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}" data-lidx="${idx}" style="--accent:${l.color || '#94a3b8'}">
+        <span class="tick">${active ? '✓' : ''}</span>
+        <span class="ometa"><span class="oname">${esc(l.name)}</span><span class="odesc">${l.open} open · ${l.total} total</span></span></div>`
+    }).join('')
+    if (!filtered.length) html = `<div class="lnote">No labels match “${esc(q)}”.</div>`
+    else if (filtered.length > shown.length) html += `<div class="lnote">+${filtered.length - shown.length} more — refine your search.</div>`
+    box.innerHTML = html
+  }
+
+  function renderFilterLabelRows() {
+    const box = $('frows'); if (!box) return
+    const list = (latest && latest.allLabels) || []
+    if (!list.length) { box.innerHTML = `<div class="lnote">No label data yet — hit ↻.</div>`; return }
+    const q = filterLabelQuery
+    const filtered = q ? list.filter((l) => l.name.toLowerCase().includes(q)) : list
+    const shown = filtered.slice(0, 60)
+    let html = shown.map((l) => {
+      const active = filter.labels.includes(l.name); const idx = list.indexOf(l)
+      return `<div class="opt ${active ? 'active' : ''}" data-flabelidx="${idx}" style="--accent:${l.color || '#94a3b8'}">
+        <span class="tick">${active ? '✓' : ''}</span>
+        <span class="ometa"><span class="oname">${esc(l.name)}</span><span class="odesc">${l.open} open · ${l.total} total</span></span></div>`
+    }).join('')
+    if (!filtered.length) html = `<div class="lnote">No labels match “${esc(q)}”.</div>`
+    else if (filtered.length > shown.length) html += `<div class="lnote">+${filtered.length - shown.length} more — refine your search.</div>`
+    box.innerHTML = html
+  }
+
+  function focusInput(sel) { const s = $('groups').querySelector(sel); if (s) { s.focus(); const v = s.value; s.value = ''; s.value = v } }
+
+  // ---- Actions ----
+  function toggleBox(key) {
+    const i = selected.indexOf(key)
+    if (i >= 0) { if (selected.length === 1) return; selected.splice(i, 1) }
+    else { if (selected.length >= MAX) return; selected.push(key); selected.sort((a, b) => ord(a) - ord(b)) }
+    save('overlay.metrics', selected); renderChips(); renderCards()
+  }
+
+  let filterTimer = null
+  function persistFilter() {
+    save('overlay.filter', cleanFilter())
+    // Debounce so rapid pill toggles fire a single refetch, not one per click.
+    clearTimeout(filterTimer)
+    filterTimer = setTimeout(() => window.overlayAPI.setFilter(cleanFilter()), 350)
+    renderActiveFilters(); renderChips(); applySize()
+  }
+  function setFacet(facet, value) { // toggle a value within a facet (any-of)
+    const arr = filter[FACET_KEY[facet]]; const i = arr.indexOf(value)
+    if (i >= 0) arr.splice(i, 1); else arr.push(value)
+    persistFilter()
+  }
+  function clearOne(facet, val) {
+    filter[FACET_KEY[facet]] = filter[FACET_KEY[facet]].filter((v) => String(v) !== String(val))
+    persistFilter()
+  }
+
+  function openSettings() { settingsOpen = true; document.body.classList.add('settings'); $('settingsBtn').classList.add('on'); $('barTitle').textContent = 'Settings'; renderChips(); applySize() }
+  function closeSettings() { settingsOpen = false; document.body.classList.remove('settings'); $('settingsBtn').classList.remove('on'); $('barTitle').textContent = 'Linear'; applySize() }
+
+  function relative(iso) {
+    const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
+    if (s < 5) return 'just now'; if (s < 60) return s + 's ago'
+    const m = Math.round(s / 60); if (m < 60) return m + 'm ago'; return Math.round(m / 60) + 'h ago'
+  }
+  let lastUpdated = null
+
+  window.overlayAPI.onLoading(() => { document.body.classList.add('loading'); $('refresh').classList.add('spin') })
+  window.overlayAPI.onData((d) => {
+    document.body.classList.remove('loading', 'errored'); $('refresh').classList.remove('spin')
+    latest = d; lastUpdated = d.updatedAt; $('updated').textContent = relative(lastUpdated)
+    renderCards(); renderActiveFilters()
+    if (settingsOpen) renderChips()
+  })
+  window.overlayAPI.onError((msg) => {
+    document.body.classList.remove('loading'); document.body.classList.add('errored'); $('refresh').classList.remove('spin')
+    $('error').textContent = '⚠ ' + msg; $('updated').textContent = 'error'
+  })
+
+  // Event delegation for the whole settings list.
+  $('groups').addEventListener('click', (e) => {
+    const clr = e.target.closest('.x'); if (clr) { clearOne(clr.dataset.facet, clr.dataset.val); return }
+    const head = e.target.closest('.ghead'); if (head) { const g = head.dataset.group; if (collapsed.has(g)) collapsed.delete(g); else collapsed.add(g); renderChips(); return }
+    const pill = e.target.closest('.pill')
+    if (pill) { if (pill.dataset.fpriority != null) setFacet('priority', +pill.dataset.fpriority); else if (pill.dataset.fteam != null) setFacet('team', pill.dataset.fteam); return }
+    const opt = e.target.closest('.opt'); if (!opt || opt.classList.contains('disabled')) return
+    if (opt.dataset.flabelidx != null) { setFacet('label', latest.allLabels[+opt.dataset.flabelidx].name); focusInput('.fsearch'); return }
+    if (opt.dataset.lidx != null) { toggleBox('label:' + latest.labels[+opt.dataset.lidx].name); focusInput('.lsearch'); return }
+    if (opt.dataset.key) toggleBox(opt.dataset.key)
+  })
+  $('groups').addEventListener('input', (e) => {
+    if (e.target.classList.contains('lsearch')) { labelQuery = e.target.value.trim().toLowerCase(); renderLabelRows() }
+    else if (e.target.classList.contains('fsearch')) { filterLabelQuery = e.target.value.trim().toLowerCase(); renderFilterLabelRows() }
+  })
+
+  $('cards').addEventListener('click', (e) => {
+    const card = e.target.closest('.card'); if (!card) return
+    window.overlayAPI.openLink(buildLinearUrl(card.dataset.key))
+  })
+  $('fdot').addEventListener('click', () => { if (!settingsOpen) openSettings() })
+  $('settingsBtn').addEventListener('click', () => (settingsOpen ? closeSettings() : openSettings()))
+  $('done').addEventListener('click', closeSettings)
+  $('refresh').addEventListener('click', () => window.overlayAPI.refresh())
+  $('close').addEventListener('click', () => window.overlayAPI.close())
+  setInterval(() => { if (lastUpdated) $('updated').textContent = relative(lastUpdated) }, 15000)
+
+  // Initial paint + kick off the first fetch with the saved filter.
+  renderCards(); renderActiveFilters(); applySize()
+  window.overlayAPI.setFilter(cleanFilter())
+</script>
+</body>
+</html>

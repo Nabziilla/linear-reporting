@@ -114,7 +114,7 @@ export const TicketTable = ({ issues, onSelectIssue }: TicketTableProps) => {
   const visible = rowsPerPage === -1 ? sorted : sorted.slice(pageStart, pageStart + rowsPerPage)
 
   return (
-    <TableContainer sx={{ maxHeight: 'calc(100vh - 220px)' }}>
+    <TableContainer>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
