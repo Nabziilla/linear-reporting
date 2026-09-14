@@ -6,6 +6,7 @@ import { useFilteredIssues } from '../../hooks/useFilteredIssues'
 import { QATeamReport } from './QATeamReport'
 import { DateRangeFilter, DateRange, DEFAULT_RANGE, filterByDateRange, describeRange } from './DateRangeFilter'
 import { PriorityFilter, PrioritySelection, filterByPriority, describePriorities } from './PriorityFilter'
+import { StatusFilter, StatusSelection, filterByStatus, describeStatuses, buildStatusOptions } from './StatusFilter'
 import { LinearIssue, Priority, StateType } from '../../types'
 import { ALL_STATE_TYPES, STATE_TYPE_LABELS, STATE_TYPE_COLORS, PRIORITY_COLORS, PRIORITY_LABELS } from '../../constants'
 import dayjs from 'dayjs'
@@ -100,6 +101,7 @@ export const ReportsPage = () => {
   const [showClosed, setShowClosed] = useState(false)
   const [dateRange, setDateRange] = useState<DateRange>(DEFAULT_RANGE)
   const [priorities, setPriorities] = useState<PrioritySelection>([])
+  const [statuses, setStatuses] = useState<StatusSelection>([])
 
   // Date range is the outermost filter: every downstream count, including the
   // completion rate, is scoped to the selected window.
@@ -113,15 +115,33 @@ export const ReportsPage = () => {
     return counts
   }, [dateFiltered])
 
-  const scopeFiltered = useMemo(
+  const priorityFiltered = useMemo(
     () => filterByPriority(dateFiltered, priorities),
     [dateFiltered, priorities]
+  )
+
+  // Status options reflect the date + priority scope, so counts stay meaningful
+  // as those filters change, but are taken before the status filter itself.
+  const statusOptions = useMemo(() => buildStatusOptions(priorityFiltered), [priorityFiltered])
+
+  const scopeFiltered = useMemo(
+    () => filterByStatus(priorityFiltered, statuses),
+    [priorityFiltered, statuses]
   )
 
   const visibleIssues = useMemo(
     () => showClosed ? scopeFiltered : scopeFiltered.filter(isOpen),
     [scopeFiltered, showClosed]
   )
+
+  // A closed status picked while "Open only" is active yields a silently empty
+  // result. Name the conflicting statuses rather than showing an empty page.
+  const hiddenByOpenOnly = useMemo(() => {
+    if (showClosed || statuses.length === 0) return []
+    return statusOptions
+      .filter((o) => statuses.includes(o.name) && CLOSED_TYPES.includes(o.type as StateType))
+      .map((o) => o.name)
+  }, [showClosed, statuses, statusOptions])
 
   const scopedIssues = useMemo(() => {
     if (selectedTeam === ALL_TEAMS) return visibleIssues
@@ -204,10 +224,18 @@ export const ReportsPage = () => {
         </Box>
         <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <PriorityFilter value={priorities} onChange={setPriorities} counts={priorityCounts} />
-          <Typography variant="caption" color="text.secondary">
-            {describeRange(dateRange)} · by {dateRange.basis} date · {describePriorities(priorities)}
-          </Typography>
         </Box>
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+          <StatusFilter value={statuses} onChange={setStatuses} options={statusOptions} />
+        </Box>
+        <Typography variant="caption" color="text.secondary">
+          {describeRange(dateRange)} · by {dateRange.basis} date · {describePriorities(priorities)} · {describeStatuses(statuses)}
+          {hiddenByOpenOnly.length > 0 && (
+            <> · <span style={{ color: '#f97316' }}>
+              “Open only” is hiding {hiddenByOpenOnly.join(', ')}
+            </span></>
+          )}
+        </Typography>
       </Box>
 
 
@@ -215,7 +243,12 @@ export const ReportsPage = () => {
           open/closed toggle and top-level team filter. */}
       <QATeamReport
         issues={scopedIssues}
-        heading={`${heading} · ${describeRange(dateRange)}${priorities.length > 0 ? ` · ${describePriorities(priorities)}` : ''}`}
+        heading={[
+          heading,
+          describeRange(dateRange),
+          priorities.length > 0 ? describePriorities(priorities) : null,
+          statuses.length > 0 ? describeStatuses(statuses) : null
+        ].filter(Boolean).join(' · ')}
       />
 
       {/* QA Snapshot */}
