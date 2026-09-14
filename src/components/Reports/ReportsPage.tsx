@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 import { useFilteredIssues } from '../../hooks/useFilteredIssues'
 import { QATeamReport } from './QATeamReport'
 import { DateRangeFilter, DateRange, DEFAULT_RANGE, filterByDateRange, describeRange } from './DateRangeFilter'
+import { PriorityFilter, PrioritySelection, filterByPriority, describePriorities } from './PriorityFilter'
 import { LinearIssue, Priority, StateType } from '../../types'
 import { ALL_STATE_TYPES, STATE_TYPE_LABELS, STATE_TYPE_COLORS, PRIORITY_COLORS, PRIORITY_LABELS } from '../../constants'
 import dayjs from 'dayjs'
@@ -98,14 +99,28 @@ export const ReportsPage = () => {
   const [qaTeam, setQaTeam] = useState<string>(ALL_TEAMS)
   const [showClosed, setShowClosed] = useState(false)
   const [dateRange, setDateRange] = useState<DateRange>(DEFAULT_RANGE)
+  const [priorities, setPriorities] = useState<PrioritySelection>([])
 
   // Date range is the outermost filter: every downstream count, including the
   // completion rate, is scoped to the selected window.
   const dateFiltered = useMemo(() => filterByDateRange(allIssues, dateRange), [allIssues, dateRange])
 
+  // Priority counts are taken before the priority filter is applied, so the
+  // chips keep showing the full picture rather than collapsing to the selection.
+  const priorityCounts = useMemo(() => {
+    const counts: Partial<Record<Priority, number>> = {}
+    for (const i of dateFiltered) counts[i.priority] = (counts[i.priority] ?? 0) + 1
+    return counts
+  }, [dateFiltered])
+
+  const scopeFiltered = useMemo(
+    () => filterByPriority(dateFiltered, priorities),
+    [dateFiltered, priorities]
+  )
+
   const visibleIssues = useMemo(
-    () => showClosed ? dateFiltered : dateFiltered.filter(isOpen),
-    [dateFiltered, showClosed]
+    () => showClosed ? scopeFiltered : scopeFiltered.filter(isOpen),
+    [scopeFiltered, showClosed]
   )
 
   const scopedIssues = useMemo(() => {
@@ -150,9 +165,9 @@ export const ReportsPage = () => {
   // under "Open only" the completed tickets are filtered out, which would force
   // the rate to 0%. Scope to the selected team, but ignore the open/closed toggle.
   const ratePool = useMemo(() => {
-    if (selectedTeam === ALL_TEAMS) return dateFiltered
-    return dateFiltered.filter((i) => i.team?.name === selectedTeam)
-  }, [dateFiltered, selectedTeam])
+    if (selectedTeam === ALL_TEAMS) return scopeFiltered
+    return scopeFiltered.filter((i) => i.team?.name === selectedTeam)
+  }, [scopeFiltered, selectedTeam])
 
   const completedCount = ratePool.filter((i) => i.state?.type === 'completed').length
   const completionRate = ratePool.length > 0
@@ -183,17 +198,25 @@ export const ReportsPage = () => {
         </Box>
       </Box>
 
-      <Box display="flex" alignItems="center" gap={2} mb={3} flexWrap="wrap">
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
-        <Typography variant="caption" color="text.secondary">
-          {describeRange(dateRange)} · by {dateRange.basis} date
-        </Typography>
+      <Box display="flex" flexDirection="column" gap={1.5} mb={3}>
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        </Box>
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+          <PriorityFilter value={priorities} onChange={setPriorities} counts={priorityCounts} />
+          <Typography variant="caption" color="text.secondary">
+            {describeRange(dateRange)} · by {dateRange.basis} date · {describePriorities(priorities)}
+          </Typography>
+        </Box>
       </Box>
 
 
       {/* Per-person QA team reporting. Uses scopedIssues so it honours the
           open/closed toggle and top-level team filter. */}
-      <QATeamReport issues={scopedIssues} heading={`${heading} · ${describeRange(dateRange)}`} />
+      <QATeamReport
+        issues={scopedIssues}
+        heading={`${heading} · ${describeRange(dateRange)}${priorities.length > 0 ? ` · ${describePriorities(priorities)}` : ''}`}
+      />
 
       {/* QA Snapshot */}
       <Card sx={{ mb: 3 }}>
