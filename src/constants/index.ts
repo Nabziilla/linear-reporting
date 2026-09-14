@@ -53,11 +53,32 @@ export const QA_TEAM_FIRST_NAMES = [
 
 const QA_FIRST_NAME_SET = new Set<string>(QA_TEAM_FIRST_NAMES)
 
-export const firstName = (fullName: string | undefined): string =>
-  (fullName ?? '').trim().split(/\s+/)[0]?.toLowerCase() ?? ''
+// Linear identifies people inconsistently across sources: the GraphQL API
+// returns a display name ("Himanshu Vashishtha"), while CSV exports carry the
+// email ("himanshu.vashishtha@hapana.com"). Normalise both to a first name.
+export const firstName = (value: string | undefined): string => {
+  const raw = (value ?? '').trim()
+  if (!raw) return ''
+  const local = raw.includes('@') ? raw.split('@')[0] : raw
+  // Emails split on dot/underscore, display names on whitespace.
+  return local.split(/[\s._-]+/)[0]?.toLowerCase() ?? ''
+}
 
-export const isQATeamMember = (fullName: string | undefined): boolean =>
-  QA_FIRST_NAME_SET.has(firstName(fullName))
+// Checks name and email, so a match succeeds whichever field Linear populated.
+export const isQATeamMember = (user: { name?: string; email?: string } | undefined): boolean => {
+  if (!user) return false
+  return QA_FIRST_NAME_SET.has(firstName(user.name)) || QA_FIRST_NAME_SET.has(firstName(user.email))
+}
+
+// The key a user groups under, preferring whichever field matched.
+export const qaMemberKey = (user: { name?: string; email?: string } | undefined): string => {
+  if (!user) return ''
+  const byName = firstName(user.name)
+  if (QA_FIRST_NAME_SET.has(byName)) return byName
+  const byEmail = firstName(user.email)
+  if (QA_FIRST_NAME_SET.has(byEmail)) return byEmail
+  return ''
+}
 
 export const STORAGE_KEYS = {
   LINEAR_API_KEY: 'linear_api_key',

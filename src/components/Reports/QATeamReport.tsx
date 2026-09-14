@@ -6,7 +6,7 @@ import {
 import GroupsIcon from '@mui/icons-material/Groups'
 import { LinearIssue, Priority, StateType } from '../../types'
 import {
-  QA_TEAM_FIRST_NAMES, isQATeamMember, firstName,
+  QA_TEAM_FIRST_NAMES, qaMemberKey,
   PRIORITY_COLORS, PRIORITY_LABELS, STATE_TYPE_COLORS
 } from '../../constants'
 import dayjs from 'dayjs'
@@ -27,8 +27,9 @@ export interface QAMemberStats {
   name: string
   avatarUrl?: string
   found: boolean
-  total: number
-  open: number
+  raised: number
+  assigned: number
+  openAssigned: number
   completed: number
   urgent: number
   stale: number
@@ -45,40 +46,55 @@ const buildMemberStats = (issues: LinearIssue[]): QAMemberStats[] => {
       key: n,
       name: n.charAt(0).toUpperCase() + n.slice(1),
       found: false,
-      total: 0, open: 0, completed: 0, urgent: 0, stale: 0,
+      raised: 0, assigned: 0, openAssigned: 0, completed: 0, urgent: 0, stale: 0,
       issues: []
     })
   }
 
   const staleCutoff = dayjs().subtract(STALE_DAYS, 'day')
 
+  const identify = (m: QAMemberStats, user?: { name?: string; avatarUrl?: string }) => {
+    if (m.found || !user?.name) return
+    m.found = true
+    m.name = user.name
+    m.avatarUrl = user.avatarUrl
+  }
+
   for (const issue of issues) {
-    const assignee = issue.assignee
-    if (!assignee || !isQATeamMember(assignee.name)) continue
+    // QA here is mostly bug-raising work: a member reports an issue that
+    // someone else fixes. Counting only assignees misses the bulk of it, so
+    // raised and assigned are tracked separately.
+    const creatorKey = qaMemberKey(issue.creator)
+    const assigneeKey = qaMemberKey(issue.assignee)
 
-    const key = firstName(assignee.name)
-    const m = byMember.get(key)
-    if (!m) continue
-
-    // Prefer the real Linear display name and avatar over the seeded placeholder.
-    if (!m.found) {
-      m.found = true
-      m.name = assignee.name
-      m.avatarUrl = assignee.avatarUrl
+    if (creatorKey) {
+      const m = byMember.get(creatorKey)
+      if (m) {
+        identify(m, issue.creator)
+        m.raised += 1
+        m.issues.push(issue)
+      }
     }
 
-    m.total += 1
-    m.issues.push(issue)
+    if (assigneeKey) {
+      const m = byMember.get(assigneeKey)
+      if (m) {
+        identify(m, issue.assignee)
+        m.assigned += 1
+        // Avoid double-listing a ticket a member both raised and owns.
+        if (assigneeKey !== creatorKey) m.issues.push(issue)
 
-    const open = isOpen(issue)
-    if (open) m.open += 1
-    if (issue.state?.type === 'completed') m.completed += 1
-    if (issue.priority === 1 && open) m.urgent += 1
-    if (open && issue.updatedAt && dayjs(issue.updatedAt).isBefore(staleCutoff)) m.stale += 1
+        const open = isOpen(issue)
+        if (open) m.openAssigned += 1
+        if (issue.state?.type === 'completed') m.completed += 1
+        if (issue.priority === 1 && open) m.urgent += 1
+        if (open && issue.updatedAt && dayjs(issue.updatedAt).isBefore(staleCutoff)) m.stale += 1
+      }
+    }
   }
 
   return Array.from(byMember.values()).sort(
-    (a, b) => b.open - a.open || b.total - a.total || a.name.localeCompare(b.name)
+    (a, b) => b.raised - a.raised || b.assigned - a.assigned || a.name.localeCompare(b.name)
   )
 }
 
@@ -107,15 +123,16 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
   const members = useMemo(() => buildMemberStats(issues), [issues])
 
   const totals = useMemo(() => ({
-    total: members.reduce((s, m) => s + m.total, 0),
-    open: members.reduce((s, m) => s + m.open, 0),
+    raised: members.reduce((s, m) => s + m.raised, 0),
+    assigned: members.reduce((s, m) => s + m.assigned, 0),
     completed: members.reduce((s, m) => s + m.completed, 0),
     urgent: members.reduce((s, m) => s + m.urgent, 0),
     stale: members.reduce((s, m) => s + m.stale, 0)
   }), [members])
 
   const missing = members.filter((m) => !m.found)
-  const maxOpen = Math.max(1, ...members.map((m) => m.open))
+  const maxRaised = Math.max(1, ...members.map((m) => m.raised))
+  const grandTotal = totals.raised + totals.assigned
 
   const selectedMember = selected ? members.find((m) => m.key === selected) ?? null : null
   const drilldown = useMemo(() => {
@@ -139,12 +156,12 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
             <Typography variant="h6">QA Team — {heading}</Typography>
           </Box>
           <Box display="flex" gap={1}>
-            <Chip size="small" label={`${totals.open} open`} sx={{ fontWeight: 600 }} />
             <Chip
               size="small"
-              label={`${totals.completed} completed`}
-              sx={{ bgcolor: '#22c55e20', color: '#22c55e', fontWeight: 600 }}
+              label={`${totals.raised} raised`}
+              sx={{ bgcolor: '#6875F520', color: '#6875F5', fontWeight: 600 }}
             />
+            <Chip size="small" label={`${totals.assigned} assigned`} sx={{ fontWeight: 600 }} />
             {totals.urgent > 0 && (
               <Chip
                 size="small"
@@ -155,7 +172,7 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
           </Box>
         </Box>
 
-        {totals.total === 0 ? (
+        {grandTotal === 0 ? (
           <Typography variant="body2" color="text.secondary">
             No tickets assigned to the QA team in this scope. Check the name list in
             <code style={{ margin: '0 4px' }}>constants/index.ts</code>
@@ -167,16 +184,28 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 600 }}>Member</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 160 }}>Workload</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 70 }} align="center">Open</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 70 }} align="center">Done</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 150 }}>Tickets raised</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 80 }} align="center">
+                    <Tooltip title="Tickets this member created" arrow>
+                      <span>Raised</span>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 80 }} align="center">
+                    <Tooltip title="Tickets assigned to this member" arrow>
+                      <span>Assigned</span>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 70 }} align="center">
+                    <Tooltip title="Assigned and still open" arrow>
+                      <span>Open</span>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell sx={{ fontWeight: 600, width: 70 }} align="center">Urgent</TableCell>
                   <TableCell sx={{ fontWeight: 600, width: 70 }} align="center">
-                    <Tooltip title={`Open and not updated in ${STALE_DAYS}+ days`} arrow>
+                    <Tooltip title={`Assigned, open, not updated in ${STALE_DAYS}+ days`} arrow>
                       <span>Stale</span>
                     </Tooltip>
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 70 }} align="center">Total</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -213,7 +242,7 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
                     <TableCell>
                       <LinearProgress
                         variant="determinate"
-                        value={(m.open / maxOpen) * 100}
+                        value={(m.raised / maxRaised) * 100}
                         sx={{
                           height: 6,
                           borderRadius: 3,
@@ -225,11 +254,11 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
                         }}
                       />
                     </TableCell>
-                    <MetricCell value={m.open} />
-                    <MetricCell value={m.completed} color={STATE_TYPE_COLORS.completed} />
+                    <MetricCell value={m.raised} color="#6875F5" />
+                    <MetricCell value={m.assigned} color={STATE_TYPE_COLORS.completed} />
+                    <MetricCell value={m.openAssigned} />
                     <MetricCell value={m.urgent} color="#f43f5e" />
                     <MetricCell value={m.stale} color="#f97316" />
-                    <MetricCell value={m.total} dim />
                   </TableRow>
                 ))}
               </TableBody>
@@ -245,8 +274,8 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
             {selectedMember && (
               <Box mt={3}>
                 <Typography variant="overline" color="text.secondary" display="block" mb={1}>
-                  {selectedMember.name} · {drilldown.length} ticket{drilldown.length !== 1 ? 's' : ''}
-                  {selectedMember.issues.length > drilldown.length ? ' (showing first 50)' : ''}
+                  {selectedMember.name} · {selectedMember.raised} raised, {selectedMember.assigned} assigned
+                  {selectedMember.issues.length > drilldown.length ? ' · showing first 50' : ''}
                 </Typography>
                 <Table size="small">
                   <TableHead>
@@ -254,6 +283,7 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
                       <TableCell sx={{ fontWeight: 600, width: 100 }}>Priority</TableCell>
                       <TableCell sx={{ fontWeight: 600, width: 110 }}>ID</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Title</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 90 }}>Role</TableCell>
                       <TableCell sx={{ fontWeight: 600, width: 130 }}>Team</TableCell>
                       <TableCell sx={{ fontWeight: 600, width: 150 }}>Status</TableCell>
                       <TableCell sx={{ fontWeight: 600, width: 110 }}>Updated</TableCell>
@@ -290,6 +320,14 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
                         <TableCell>
                           <Typography variant="body2" noWrap sx={{ maxWidth: 420 }}>
                             {issue.title}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption" color="text.secondary">
+                            {[
+                              qaMemberKey(issue.creator) === selectedMember.key ? 'raised' : null,
+                              qaMemberKey(issue.assignee) === selectedMember.key ? 'assigned' : null
+                            ].filter(Boolean).join(' + ')}
                           </Typography>
                         </TableCell>
                         <TableCell>
