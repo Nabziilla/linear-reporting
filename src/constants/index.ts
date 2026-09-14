@@ -48,7 +48,8 @@ export const QA_TEAM_FIRST_NAMES = [
   'akash',
   'onkar',
   'atul',
-  'rajan'
+  'rajan',
+  'mah'
 ] as const
 
 const QA_FIRST_NAME_SET = new Set<string>(QA_TEAM_FIRST_NAMES)
