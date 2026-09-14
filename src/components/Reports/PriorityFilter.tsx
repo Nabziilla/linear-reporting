@@ -57,7 +57,14 @@ export const PriorityFilter = ({ value, onChange, counts }: PriorityFilterProps)
             size="small"
             onClick={() => toggle(p)}
             variant={active ? 'filled' : 'outlined'}
-            label={count === undefined ? PRIORITY_LABELS[p] : `${PRIORITY_LABELS[p]} ${count}`}
+            label={
+              count === undefined ? PRIORITY_LABELS[p] : (
+                <>
+                  {PRIORITY_LABELS[p]}
+                  <Box component="span" sx={{ opacity: 0.6, ml: 0.6, fontWeight: 500 }}>{count}</Box>
+                </>
+              )
+            }
             sx={{
               fontWeight: 600,
               borderColor: active ? color : 'divider',
