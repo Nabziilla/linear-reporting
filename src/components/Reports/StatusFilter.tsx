@@ -13,13 +13,9 @@ export interface StatusOption {
 
 /**
  * Statuses are taken from the data rather than a fixed list, because workflow
- * state names are per-workspace and differ between teams. Ordered by the
- * natural workflow progression (via state type), then by volume.
+ * state names are per-workspace and differ between teams. Ordered
+ * alphabetically so a given status sits in a predictable place.
  */
-const TYPE_ORDER: StateType[] = [
-  'triage', 'backlog', 'unstarted', 'started', 'completed', 'canceled', 'duplicate'
-]
-
 export const buildStatusOptions = (issues: LinearIssue[]): StatusOption[] => {
   const byName = new Map<string, StatusOption>()
   for (const i of issues) {
@@ -32,12 +28,7 @@ export const buildStatusOptions = (issues: LinearIssue[]): StatusOption[] => {
       byName.set(name, { name, type: i.state?.type as StateType | undefined, count: 1 })
     }
   }
-  return Array.from(byName.values()).sort((a, b) => {
-    const ai = a.type ? TYPE_ORDER.indexOf(a.type) : TYPE_ORDER.length
-    const bi = b.type ? TYPE_ORDER.indexOf(b.type) : TYPE_ORDER.length
-    if (ai !== bi) return ai - bi
-    return b.count - a.count || a.name.localeCompare(b.name)
-  })
+  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export const filterByStatus = (

@@ -93,9 +93,9 @@ const buildMemberStats = (issues: LinearIssue[]): QAMemberStats[] => {
     }
   }
 
-  return Array.from(byMember.values()).sort(
-    (a, b) => b.raised - a.raised || b.assigned - a.assigned || a.name.localeCompare(b.name)
-  )
+  // Alphabetical by display name, so each member keeps a fixed row rather than
+  // shifting position as their counts change.
+  return Array.from(byMember.values()).sort((a, b) => a.name.localeCompare(b.name))
 }
 
 const MetricCell = ({ value, color, dim }: { value: number; color?: string; dim?: boolean }) => (

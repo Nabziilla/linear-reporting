@@ -61,11 +61,9 @@ const buildTeamSummaries = (issues: LinearIssue[], teamNames: string[]): TeamSum
       allTeams.byType[t] += 1
     }
   }
-  // Teams carrying tickets lead; any Linear team with nothing sinks to the end,
-  // where a zero card reads as a real signal rather than a rendering gap.
-  const rest = Array.from(byTeam.values()).sort(
-    (a, b) => b.total - a.total || a.name.localeCompare(b.name)
-  )
+  // Alphabetical, so cards keep stable positions between loads. "All Teams"
+  // stays pinned first as the overview.
+  const rest = Array.from(byTeam.values()).sort((a, b) => a.name.localeCompare(b.name))
   return [allTeams, ...rest]
 }
 
