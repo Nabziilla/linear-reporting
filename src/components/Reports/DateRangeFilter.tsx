@@ -101,7 +101,7 @@ export const DateRangeFilter = ({ value, onChange }: DateRangeFilterProps) => {
   }
 
   return (
-    <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
+    <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
       <ToggleButtonGroup
         size="small"
         exclusive
@@ -126,27 +126,23 @@ export const DateRangeFilter = ({ value, onChange }: DateRangeFilterProps) => {
       </ToggleButtonGroup>
 
       {value.key === 'custom' && (
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box display="flex" alignItems="center" gap={0.75}>
           <TextField
             type="date"
             size="small"
-            label="From"
-            InputLabelProps={{ shrink: true }}
             value={value.from ?? ''}
-            inputProps={{ max: value.to ?? today }}
+            inputProps={{ max: value.to ?? today, 'aria-label': 'From date' }}
             onChange={(e) => onChange({ ...value, from: e.target.value || undefined })}
-            sx={{ width: 160 }}
+            sx={{ width: 140, '& input': { fontSize: '0.8rem', py: 0.75 } }}
           />
-          <Typography variant="body2" color="text.secondary">to</Typography>
+          <Typography variant="caption" color="text.secondary">to</Typography>
           <TextField
             type="date"
             size="small"
-            label="To"
-            InputLabelProps={{ shrink: true }}
             value={value.to ?? ''}
-            inputProps={{ min: value.from, max: today }}
+            inputProps={{ min: value.from, max: today, 'aria-label': 'To date' }}
             onChange={(e) => onChange({ ...value, to: e.target.value || undefined })}
-            sx={{ width: 160 }}
+            sx={{ width: 140, '& input': { fontSize: '0.8rem', py: 0.75 } }}
           />
         </Box>
       )}

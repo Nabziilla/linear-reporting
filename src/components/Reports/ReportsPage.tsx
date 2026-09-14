@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Box, Typography, Grid, Card, CardContent, Chip, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Avatar, Tooltip as MuiTooltip, Link, ToggleButtonGroup, ToggleButton } from '@mui/material'
+import { Box, Typography, Grid, Card, CardContent, Chip, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Avatar, Tooltip as MuiTooltip, Link, ToggleButtonGroup, ToggleButton, Button } from '@mui/material'
+import FilterListIcon from '@mui/icons-material/FilterList'
 import { styled } from '@mui/material/styles'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts'
 import { useFilteredIssues } from '../../hooks/useFilteredIssues'
@@ -93,6 +94,15 @@ const FilterTile = ({
 
 const LoadingBox = styled(Box)({ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 })
 
+/** Row label in the filter grid. Fixed width so the controls line up. */
+const FilterLabel = styled(Typography)(({ theme }) => ({
+  ...theme.typography.overline,
+  color: theme.palette.text.secondary,
+  fontWeight: 600,
+  lineHeight: 1.2,
+  whiteSpace: 'nowrap'
+})) as typeof Typography
+
 export const ReportsPage = () => {
   const { allIssues, isLoading } = useFilteredIssues()
   const [selectedTeam] = useState<string>(ALL_TEAMS)
@@ -136,6 +146,21 @@ export const ReportsPage = () => {
 
   // A closed status picked while "Open only" is active yields a silently empty
   // result. Name the conflicting statuses rather than showing an empty page.
+  // "Active" means the filter departs from its default, so the badge and the
+  // Clear all button only appear when there is something to clear.
+  const activeFilterCount =
+    (dateRange.key !== DEFAULT_RANGE.key ? 1 : 0) +
+    (priorities.length > 0 ? 1 : 0) +
+    (statuses.length > 0 ? 1 : 0) +
+    (showClosed ? 1 : 0)
+
+  const resetFilters = () => {
+    setDateRange(DEFAULT_RANGE)
+    setPriorities([])
+    setStatuses([])
+    setShowClosed(false)
+  }
+
   const hiddenByOpenOnly = useMemo(() => {
     if (showClosed || statuses.length === 0) return []
     return statusOptions
@@ -202,41 +227,61 @@ export const ReportsPage = () => {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1.5}>
         <Typography variant="h5">QA Reports</Typography>
-        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-          <ToggleButtonGroup
-            size="small"
-            exclusive
-            value={showClosed ? 'all' : 'open'}
-            onChange={(_, val) => { if (val) setShowClosed(val === 'all') }}
-          >
-            <ToggleButton value="open">Open only</ToggleButton>
-            <ToggleButton value="all">Include closed</ToggleButton>
-          </ToggleButtonGroup>
-          <Typography variant="body2" color="text.secondary">
-            <strong>{heading}</strong> · Completion rate: <strong>{completionRate}%</strong> · {scopedIssues.length} shown of {ratePool.length} total
-          </Typography>
-        </Box>
-      </Box>
-
-      <Box display="flex" flexDirection="column" gap={1.5} mb={3}>
-        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-          <DateRangeFilter value={dateRange} onChange={setDateRange} />
-        </Box>
-        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-          <PriorityFilter value={priorities} onChange={setPriorities} counts={priorityCounts} />
-        </Box>
-        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-          <StatusFilter value={statuses} onChange={setStatuses} options={statusOptions} />
-        </Box>
-        <Typography variant="caption" color="text.secondary">
-          {describeRange(dateRange)} · by {dateRange.basis} date · {describePriorities(priorities)} · {describeStatuses(statuses)}
-          {hiddenByOpenOnly.length > 0 && (
-            <> · <span style={{ color: '#f97316' }}>
-              “Open only” is hiding {hiddenByOpenOnly.join(', ')}
-            </span></>
-          )}
+        <Typography variant="body2" color="text.secondary">
+          <strong>{heading}</strong> · Completion rate: <strong>{completionRate}%</strong> · {scopedIssues.length} shown of {ratePool.length} total
         </Typography>
       </Box>
+
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5} flexWrap="wrap" gap={1}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <FilterListIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Filters</Typography>
+              {activeFilterCount > 0 && (
+                <Chip
+                  size="small"
+                  label={`${activeFilterCount} active`}
+                  sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700 }}
+                />
+              )}
+            </Box>
+            {activeFilterCount > 0 && (
+              <Button size="small" onClick={resetFilters} sx={{ minWidth: 0 }}>
+                Clear all
+              </Button>
+            )}
+          </Box>
+
+          <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'auto 1fr' }} columnGap={2.5} rowGap={1.5} alignItems="center">
+            <FilterLabel>Period</FilterLabel>
+            <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
+              <DateRangeFilter value={dateRange} onChange={setDateRange} />
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={showClosed ? 'all' : 'open'}
+                onChange={(_, val) => { if (val) setShowClosed(val === 'all') }}
+              >
+                <ToggleButton value="open">Open only</ToggleButton>
+                <ToggleButton value="all">Include closed</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            <FilterLabel>Priority</FilterLabel>
+            <PriorityFilter value={priorities} onChange={setPriorities} counts={priorityCounts} />
+
+            <FilterLabel>Status</FilterLabel>
+            <StatusFilter value={statuses} onChange={setStatuses} options={statusOptions} />
+          </Box>
+
+          {hiddenByOpenOnly.length > 0 && (
+            <Typography variant="caption" sx={{ color: '#f97316', display: 'block', mt: 1.5 }}>
+              “Open only” is hiding {hiddenByOpenOnly.join(', ')} — switch to “Include closed” to see them.
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
 
 
       {/* Per-person QA team reporting. Uses scopedIssues so it honours the
