@@ -1,4 +1,4 @@
-import { LinearIssue, LinearTeam, LinearUser, LinearComment } from '../types'
+import { LinearIssue, LinearTeam, LinearUser, LinearComment, LinearHistoryEntry } from '../types'
 import { LINEAR_GRAPHQL_ENDPOINT, ISSUES_PER_PAGE } from '../constants'
 
 const ISSUES_QUERY = `
@@ -49,6 +49,25 @@ const ISSUE_COMMENTS_QUERY = `
     issue(id: $issueId) {
       comments(first: 50, orderBy: createdAt) {
         nodes { id body createdAt user { name email } }
+        pageInfo { hasNextPage }
+      }
+    }
+  }
+`
+
+// Only state transitions are selected. Linear's complexity budget is 10k points
+// per query and a history page with both states costs ~400-500 points, so this
+// is fetched one issue at a time, on demand — never across the whole workspace.
+const ISSUE_HISTORY_QUERY = `
+  query IssueHistory($issueId: String!) {
+    issue(id: $issueId) {
+      history(first: 50) {
+        nodes {
+          id
+          createdAt
+          fromState { id name type }
+          toState { id name type }
+        }
         pageInfo { hasNextPage }
       }
     }
@@ -117,6 +136,18 @@ export const fetchTeams = async (apiKey: string): Promise<LinearTeam[]> => {
 export const fetchMembers = async (apiKey: string): Promise<LinearUser[]> => {
   const data = await executeQuery(apiKey, MEMBERS_QUERY)
   return data.users.nodes
+}
+
+export const fetchIssueHistory = async (
+  apiKey: string,
+  issueId: string
+): Promise<{ entries: LinearHistoryEntry[]; hasMore: boolean }> => {
+  const data = await executeQuery(apiKey, ISSUE_HISTORY_QUERY, { issueId })
+  const nodes = data.issue?.history?.nodes ?? []
+  const hasMore = !!data.issue?.history?.pageInfo?.hasNextPage
+  // Linear returns history newest-first; oldest-first reads as a pipeline.
+  const entries = [...nodes].reverse() as LinearHistoryEntry[]
+  return { entries, hasMore }
 }
 
 export const fetchIssueComments = async (

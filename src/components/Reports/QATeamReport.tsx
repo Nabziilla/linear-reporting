@@ -9,6 +9,7 @@ import {
   QA_TEAM_FIRST_NAMES, qaMemberKey,
   PRIORITY_COLORS, PRIORITY_LABELS, STATE_TYPE_COLORS
 } from '../../constants'
+import { QARoundsCell } from './QARoundsCell'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
@@ -21,6 +22,8 @@ const PRIORITY_ORDER: Priority[] = [1, 2, 3, 4, 0]
 // Stale = open and untouched for a week. Surfaces tickets quietly rotting in
 // someone's queue, which a raw open-count hides.
 const STALE_DAYS = 7
+
+const DRILLDOWN_LIMIT = 25
 
 export interface QAMemberStats {
   key: string
@@ -144,7 +147,9 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
         if (ao !== bo) return ao - bo
         return PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority)
       })
-      .slice(0, 50)
+      // Capped because each row fetches its own QA history; 25 keeps the burst
+      // of requests reasonable when a member is expanded.
+      .slice(0, DRILLDOWN_LIMIT)
   }, [selectedMember])
 
   return (
@@ -275,7 +280,7 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
               <Box mt={3}>
                 <Typography variant="overline" color="text.secondary" display="block" mb={1}>
                   {selectedMember.name} · {selectedMember.raised} raised, {selectedMember.assigned} assigned
-                  {selectedMember.issues.length > drilldown.length ? ' · showing first 50' : ''}
+                  {selectedMember.issues.length > drilldown.length ? ` · showing first ${DRILLDOWN_LIMIT}` : ''}
                 </Typography>
                 <Table size="small">
                   <TableHead>
@@ -283,6 +288,11 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
                       <TableCell sx={{ fontWeight: 600, width: 100 }}>Priority</TableCell>
                       <TableCell sx={{ fontWeight: 600, width: 110 }}>ID</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Title</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 100 }}>
+                        <Tooltip title="Times the ticket went back from QA to development" arrow>
+                          <span>QA rework</span>
+                        </Tooltip>
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 600, width: 90 }}>Role</TableCell>
                       <TableCell sx={{ fontWeight: 600, width: 130 }}>Team</TableCell>
                       <TableCell sx={{ fontWeight: 600, width: 150 }}>Status</TableCell>
@@ -321,6 +331,9 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
                           <Typography variant="body2" noWrap sx={{ maxWidth: 420 }}>
                             {issue.title}
                           </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <QARoundsCell issueId={issue.id} />
                         </TableCell>
                         <TableCell>
                           <Typography variant="caption" color="text.secondary">
