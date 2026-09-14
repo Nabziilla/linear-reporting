@@ -91,7 +91,7 @@ const FilterTile = ({
 const LoadingBox = styled(Box)({ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 })
 
 export const ReportsPage = () => {
-  const { issues, allIssues, isLoading } = useFilteredIssues()
+  const { allIssues, isLoading } = useFilteredIssues()
   const [selectedTeam] = useState<string>(ALL_TEAMS)
   const [selectedPriority, setSelectedPriority] = useState<string>('all')
   const [qaTeam, setQaTeam] = useState<string>(ALL_TEAMS)
@@ -137,9 +137,17 @@ export const ReportsPage = () => {
     return result
   }, [qaIssues, qaTeam, selectedPriority])
 
-  const completedCount = scopedIssues.filter((i) => i.state?.type === 'completed').length
-  const completionRate = scopedIssues.length > 0
-    ? Math.round((completedCount / scopedIssues.length) * 100)
+  // Completion rate must measure against every ticket, not the visible subset:
+  // under "Open only" the completed tickets are filtered out, which would force
+  // the rate to 0%. Scope to the selected team, but ignore the open/closed toggle.
+  const ratePool = useMemo(() => {
+    if (selectedTeam === ALL_TEAMS) return allIssues
+    return allIssues.filter((i) => i.team?.name === selectedTeam)
+  }, [allIssues, selectedTeam])
+
+  const completedCount = ratePool.filter((i) => i.state?.type === 'completed').length
+  const completionRate = ratePool.length > 0
+    ? Math.round((completedCount / ratePool.length) * 100)
     : 0
 
   if (isLoading) return <LoadingBox><CircularProgress /></LoadingBox>
@@ -161,7 +169,7 @@ export const ReportsPage = () => {
             <ToggleButton value="all">Include closed</ToggleButton>
           </ToggleButtonGroup>
           <Typography variant="body2" color="text.secondary">
-            <strong>{heading}</strong> · Completion rate: <strong>{completionRate}%</strong> · {issues.length} filtered of {scopedIssues.length} total
+            <strong>{heading}</strong> · Completion rate: <strong>{completionRate}%</strong> · {scopedIssues.length} shown of {ratePool.length} total
           </Typography>
         </Box>
       </Box>
