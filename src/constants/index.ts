@@ -39,6 +39,26 @@ export const STATE_TYPE_COLORS: Record<StateType, string> = {
 export const ALL_STATE_TYPES: StateType[] = ['triage', 'backlog', 'unstarted', 'started', 'completed', 'canceled', 'duplicate']
 export const ALL_PRIORITIES: Priority[] = [0, 1, 2, 3, 4]
 
+// QA team, matched on the first word of a Linear user's display name
+// (case-insensitive). Add or remove names here as the team changes.
+export const QA_TEAM_FIRST_NAMES = [
+  'himanshu',
+  'anjali',
+  'deepak',
+  'akash',
+  'onkar',
+  'atul',
+  'rajan'
+] as const
+
+const QA_FIRST_NAME_SET = new Set<string>(QA_TEAM_FIRST_NAMES)
+
+export const firstName = (fullName: string | undefined): string =>
+  (fullName ?? '').trim().split(/\s+/)[0]?.toLowerCase() ?? ''
+
+export const isQATeamMember = (fullName: string | undefined): boolean =>
+  QA_FIRST_NAME_SET.has(firstName(fullName))
+
 export const STORAGE_KEYS = {
   LINEAR_API_KEY: 'linear_api_key',
   ANTHROPIC_API_KEY: 'anthropic_api_key'

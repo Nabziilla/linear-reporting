@@ -3,6 +3,7 @@ import { Box, Typography, Grid, Card, CardContent, Chip, CircularProgress, Table
 import { styled } from '@mui/material/styles'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts'
 import { useFilteredIssues } from '../../hooks/useFilteredIssues'
+import { QATeamReport } from './QATeamReport'
 import { LinearIssue, Priority, StateType } from '../../types'
 import { ALL_STATE_TYPES, STATE_TYPE_LABELS, STATE_TYPE_COLORS, PRIORITY_COLORS, PRIORITY_LABELS } from '../../constants'
 import dayjs from 'dayjs'
@@ -165,6 +166,10 @@ export const ReportsPage = () => {
         </Box>
       </Box>
 
+
+      {/* Per-person QA team reporting. Uses scopedIssues so it honours the
+          open/closed toggle and top-level team filter. */}
+      <QATeamReport issues={scopedIssues} heading={heading} />
 
       {/* QA Snapshot */}
       <Card sx={{ mb: 3 }}>
