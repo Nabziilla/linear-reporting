@@ -4,6 +4,7 @@ import { styled } from '@mui/material/styles'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts'
 import { useFilteredIssues } from '../../hooks/useFilteredIssues'
 import { QATeamReport } from './QATeamReport'
+import { DateRangeFilter, DateRange, DEFAULT_RANGE, filterByDateRange, describeRange } from './DateRangeFilter'
 import { LinearIssue, Priority, StateType } from '../../types'
 import { ALL_STATE_TYPES, STATE_TYPE_LABELS, STATE_TYPE_COLORS, PRIORITY_COLORS, PRIORITY_LABELS } from '../../constants'
 import dayjs from 'dayjs'
@@ -96,8 +97,16 @@ export const ReportsPage = () => {
   const [selectedPriority, setSelectedPriority] = useState<string>('all')
   const [qaTeam, setQaTeam] = useState<string>(ALL_TEAMS)
   const [showClosed, setShowClosed] = useState(false)
+  const [dateRange, setDateRange] = useState<DateRange>(DEFAULT_RANGE)
 
-  const visibleIssues = useMemo(() => showClosed ? allIssues : allIssues.filter(isOpen), [allIssues, showClosed])
+  // Date range is the outermost filter: every downstream count, including the
+  // completion rate, is scoped to the selected window.
+  const dateFiltered = useMemo(() => filterByDateRange(allIssues, dateRange), [allIssues, dateRange])
+
+  const visibleIssues = useMemo(
+    () => showClosed ? dateFiltered : dateFiltered.filter(isOpen),
+    [dateFiltered, showClosed]
+  )
 
   const scopedIssues = useMemo(() => {
     if (selectedTeam === ALL_TEAMS) return visibleIssues
@@ -141,9 +150,9 @@ export const ReportsPage = () => {
   // under "Open only" the completed tickets are filtered out, which would force
   // the rate to 0%. Scope to the selected team, but ignore the open/closed toggle.
   const ratePool = useMemo(() => {
-    if (selectedTeam === ALL_TEAMS) return allIssues
-    return allIssues.filter((i) => i.team?.name === selectedTeam)
-  }, [allIssues, selectedTeam])
+    if (selectedTeam === ALL_TEAMS) return dateFiltered
+    return dateFiltered.filter((i) => i.team?.name === selectedTeam)
+  }, [dateFiltered, selectedTeam])
 
   const completedCount = ratePool.filter((i) => i.state?.type === 'completed').length
   const completionRate = ratePool.length > 0
@@ -156,9 +165,9 @@ export const ReportsPage = () => {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1.5}>
         <Typography variant="h5">QA Reports</Typography>
-        <Box display="flex" alignItems="center" gap={2}>
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <ToggleButtonGroup
             size="small"
             exclusive
@@ -174,10 +183,17 @@ export const ReportsPage = () => {
         </Box>
       </Box>
 
+      <Box display="flex" alignItems="center" gap={2} mb={3} flexWrap="wrap">
+        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <Typography variant="caption" color="text.secondary">
+          {describeRange(dateRange)} · by {dateRange.basis} date
+        </Typography>
+      </Box>
+
 
       {/* Per-person QA team reporting. Uses scopedIssues so it honours the
           open/closed toggle and top-level team filter. */}
-      <QATeamReport issues={scopedIssues} heading={heading} />
+      <QATeamReport issues={scopedIssues} heading={`${heading} · ${describeRange(dateRange)}`} />
 
       {/* QA Snapshot */}
       <Card sx={{ mb: 3 }}>
