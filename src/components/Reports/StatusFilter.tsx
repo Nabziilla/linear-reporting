@@ -1,10 +1,7 @@
-import { useState } from 'react'
-import {
-  Box, Button, Checkbox, Chip, Divider, ListItemText, Menu, MenuItem, Typography
-} from '@mui/material'
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+import { Box, Checkbox, Chip, Divider, ListItemText, MenuItem, Typography } from '@mui/material'
 import { LinearIssue, StateType } from '../../types'
 import { STATE_TYPE_COLORS } from '../../constants'
+import { FilterDropdown } from './FilterDropdown'
 
 /** Empty set means "no filter" — every status is included. */
 export type StatusSelection = string[]
@@ -69,8 +66,6 @@ interface StatusFilterProps {
  * removable chips so the active filter stays visible without opening the menu.
  */
 export const StatusFilter = ({ value, onChange, options }: StatusFilterProps) => {
-  const [anchor, setAnchor] = useState<null | HTMLElement>(null)
-
   const toggle = (name: string) => {
     onChange(value.includes(name) ? value.filter((x) => x !== name) : [...value, name])
   }
@@ -83,20 +78,38 @@ export const StatusFilter = ({ value, onChange, options }: StatusFilterProps) =>
 
   return (
     <Box display="flex" alignItems="center" gap={0.75} flexWrap="wrap">
-      <Button
-        size="small"
-        variant="outlined"
-        onClick={(e) => setAnchor(e.currentTarget)}
-        endIcon={<ArrowDropDownIcon />}
-        sx={{
-          textTransform: 'none',
-          fontWeight: 600,
-          borderColor: 'divider',
-          color: value.length > 0 ? 'primary.main' : 'text.secondary'
-        }}
+      <FilterDropdown
+        label={value.length === 0 ? 'All statuses' : `${value.length} selected`}
+        active={value.length > 0}
+        minWidth={260}
       >
-        {value.length === 0 ? 'All statuses' : `${value.length} selected`}
-      </Button>
+        {(close) => [
+          <MenuItem
+            key="__clear"
+            onClick={() => { onChange([]); close() }}
+            disabled={value.length === 0}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>Clear selection</Typography>
+          </MenuItem>,
+          <Divider key="__div" />,
+          ...options.map(({ name, type, count }) => (
+            <MenuItem key={name} onClick={() => toggle(name)} dense>
+              <Checkbox size="small" checked={value.includes(name)} sx={{ py: 0, mr: 1 }} />
+              <Box
+                sx={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  bgcolor: type ? STATE_TYPE_COLORS[type] : '#94a3b8',
+                  mr: 1.25, flexShrink: 0
+                }}
+              />
+              <ListItemText primary={name} primaryTypographyProps={{ variant: 'body2' }} />
+              <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                {count}
+              </Typography>
+            </MenuItem>
+          ))
+        ]}
+      </FilterDropdown>
 
       {selected.map((name) => {
         const opt = options.find((o) => o.name === name)
@@ -118,36 +131,6 @@ export const StatusFilter = ({ value, onChange, options }: StatusFilterProps) =>
         )
       })}
 
-      <Menu
-        anchorEl={anchor}
-        open={!!anchor}
-        onClose={() => setAnchor(null)}
-        slotProps={{ paper: { sx: { maxHeight: 420, minWidth: 260 } } }}
-      >
-        <MenuItem
-          onClick={() => { onChange([]); setAnchor(null) }}
-          disabled={value.length === 0}
-        >
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>Clear selection</Typography>
-        </MenuItem>
-        <Divider />
-        {options.map(({ name, type, count }) => {
-          const color = type ? STATE_TYPE_COLORS[type] : '#94a3b8'
-          return (
-            <MenuItem key={name} onClick={() => toggle(name)} dense>
-              <Checkbox size="small" checked={value.includes(name)} sx={{ py: 0, mr: 1 }} />
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, mr: 1.25, flexShrink: 0 }} />
-              <ListItemText
-                primary={name}
-                primaryTypographyProps={{ variant: 'body2' }}
-              />
-              <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                {count}
-              </Typography>
-            </MenuItem>
-          )
-        })}
-      </Menu>
     </Box>
   )
 }

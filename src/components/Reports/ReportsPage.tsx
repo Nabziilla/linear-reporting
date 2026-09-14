@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Box, Typography, Grid, Card, CardContent, Chip, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Avatar, Tooltip as MuiTooltip, Link, ToggleButtonGroup, ToggleButton, Button } from '@mui/material'
+import { Box, Typography, Grid, Card, CardContent, Chip, CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Avatar, Tooltip as MuiTooltip, Link, Button, MenuItem, ListItemText } from '@mui/material'
 import FilterListIcon from '@mui/icons-material/FilterList'
+import CheckIcon from '@mui/icons-material/Check'
+import { FilterDropdown } from './FilterDropdown'
 import { styled } from '@mui/material/styles'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts'
 import { useFilteredIssues } from '../../hooks/useFilteredIssues'
@@ -255,17 +257,38 @@ export const ReportsPage = () => {
 
           <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'auto 1fr' }} columnGap={2.5} rowGap={1.5} alignItems="center">
             <FilterLabel>Period</FilterLabel>
-            <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
+            <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
               <DateRangeFilter value={dateRange} onChange={setDateRange} />
-              <ToggleButtonGroup
-                size="small"
-                exclusive
-                value={showClosed ? 'all' : 'open'}
-                onChange={(_, val) => { if (val) setShowClosed(val === 'all') }}
+              <FilterDropdown
+                label={showClosed ? 'Open and closed' : 'Open only'}
+                active={showClosed}
+                minWidth={180}
               >
-                <ToggleButton value="open">Open only</ToggleButton>
-                <ToggleButton value="all">Include closed</ToggleButton>
-              </ToggleButtonGroup>
+                {(close) => [
+                  <MenuItem
+                    key="open"
+                    dense
+                    selected={!showClosed}
+                    onClick={() => { setShowClosed(false); close() }}
+                  >
+                    <Box sx={{ width: 24, display: 'flex', alignItems: 'center' }}>
+                      {!showClosed && <CheckIcon sx={{ fontSize: 16 }} />}
+                    </Box>
+                    <ListItemText primary="Open only" primaryTypographyProps={{ variant: 'body2' }} />
+                  </MenuItem>,
+                  <MenuItem
+                    key="all"
+                    dense
+                    selected={showClosed}
+                    onClick={() => { setShowClosed(true); close() }}
+                  >
+                    <Box sx={{ width: 24, display: 'flex', alignItems: 'center' }}>
+                      {showClosed && <CheckIcon sx={{ fontSize: 16 }} />}
+                    </Box>
+                    <ListItemText primary="Open and closed" primaryTypographyProps={{ variant: 'body2' }} />
+                  </MenuItem>
+                ]}
+              </FilterDropdown>
             </Box>
 
             <FilterLabel>Priority</FilterLabel>

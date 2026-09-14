@@ -1,5 +1,9 @@
-import { Box, ToggleButton, ToggleButtonGroup, TextField, Typography } from '@mui/material'
+import {
+  Box, Divider, ListItemText, MenuItem, TextField, ToggleButton, ToggleButtonGroup, Typography
+} from '@mui/material'
+import CheckIcon from '@mui/icons-material/Check'
 import { LinearIssue } from '../../types'
+import { FilterDropdown } from './FilterDropdown'
 import dayjs from 'dayjs'
 
 export type RangeKey = '7d' | '30d' | '90d' | 'all' | 'custom'
@@ -100,30 +104,54 @@ export const DateRangeFilter = ({ value, onChange }: DateRangeFilterProps) => {
     onChange({ ...value, key })
   }
 
+  const RANGE_KEYS: RangeKey[] = ['7d', '30d', '90d', 'all', 'custom']
+
   return (
     <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-      <ToggleButtonGroup
-        size="small"
-        exclusive
-        value={value.basis}
-        onChange={(_, basis: DateBasis | null) => basis && onChange({ ...value, basis })}
+      <FilterDropdown
+        label={`${describeRange(value)} · ${value.basis}`}
+        active={value.key !== DEFAULT_RANGE.key || value.basis !== DEFAULT_RANGE.basis}
+        minWidth={220}
       >
-        <ToggleButton value="created">Created</ToggleButton>
-        <ToggleButton value="updated">Updated</ToggleButton>
-      </ToggleButtonGroup>
-
-      <ToggleButtonGroup
-        size="small"
-        exclusive
-        value={value.key}
-        onChange={(_, key: RangeKey | null) => setKey(key)}
-      >
-        <ToggleButton value="7d">7d</ToggleButton>
-        <ToggleButton value="30d">30d</ToggleButton>
-        <ToggleButton value="90d">90d</ToggleButton>
-        <ToggleButton value="all">All</ToggleButton>
-        <ToggleButton value="custom">Custom</ToggleButton>
-      </ToggleButtonGroup>
+        {(close) => [
+          ...RANGE_KEYS.map((k) => (
+            <MenuItem
+              key={k}
+              dense
+              selected={value.key === k}
+              onClick={() => {
+                setKey(k)
+                // Custom keeps the menu open so the date inputs can be reached.
+                if (k !== 'custom') close()
+              }}
+            >
+              <Box sx={{ width: 24, display: 'flex', alignItems: 'center' }}>
+                {value.key === k && <CheckIcon sx={{ fontSize: 16 }} />}
+              </Box>
+              <ListItemText
+                primary={k === 'all' ? 'All time' : k === 'custom' ? 'Custom range…' : `Last ${RANGE_LABELS[k]}`}
+                primaryTypographyProps={{ variant: 'body2' }}
+              />
+            </MenuItem>
+          )),
+          <Divider key="__div" />,
+          <Box key="__basis" sx={{ px: 2, py: 1 }}>
+            <Typography variant="caption" color="text.secondary" display="block" mb={0.75}>
+              Filter on
+            </Typography>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              fullWidth
+              value={value.basis}
+              onChange={(_, basis: DateBasis | null) => basis && onChange({ ...value, basis })}
+            >
+              <ToggleButton value="created">Created</ToggleButton>
+              <ToggleButton value="updated">Updated</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+        ]}
+      </FilterDropdown>
 
       {value.key === 'custom' && (
         <Box display="flex" alignItems="center" gap={0.75}>
