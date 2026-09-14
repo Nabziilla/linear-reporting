@@ -44,10 +44,11 @@ const tally = (
   return Array.from(map.values()).sort((a, b) => b.count - a.count)
 }
 
-export const useQaReport = (period: QaPeriod) => {
+export const useQaReport = (period: QaPeriod, customSinceISO?: string) => {
   const apiKey = useAppStore((s) => s.settings.linearApiKey)
   const hasApiKey = !!apiKey
-  const sinceISO = useMemo(() => startOfPeriod(period), [period])
+  // A caller-supplied start date (e.g. a date-range picker) overrides the period window.
+  const sinceISO = useMemo(() => customSinceISO ?? startOfPeriod(period), [period, customSinceISO])
 
   const queueQuery = useQuery({
     queryKey: ['qa-queue', apiKey],

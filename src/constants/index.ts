@@ -75,3 +75,15 @@ export const QA_AGE_BUCKETS = [
 
 // A ticket in QA longer than this (days) is flagged as "aging" / a bottleneck.
 export const QA_AGING_THRESHOLD_DAYS = 3
+
+// The QA team roster (Linear assignee display names). Used for the "My QA Team"
+// filter and per-person breakdowns in Reports.
+export const QA_TEAM_MEMBERS = [
+  'Anjali Rajput',
+  'Himanshu Vashishtha',
+  'Akash Sharma',
+  'Deepak Aswal',
+  'Atul Roy',
+  'Onkar Pathak',
+  'Rajan Kanwat'
+] as const
