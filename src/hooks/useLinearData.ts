@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useAppStore } from '../stores/useAppStore'
-import { fetchViewer, fetchAllIssues, fetchTeams, fetchMembers, fetchIssueComments } from '../services/linearService'
+import { fetchViewer, fetchAllIssues, fetchTeams, fetchMembers, fetchIssueComments, fetchIssueHistory } from '../services/linearService'
 
 export const useLinearViewer = () => {
   const apiKey = useAppStore((s) => s.settings.linearApiKey)
@@ -61,6 +61,20 @@ export const useIssueComments = (issueId: string | undefined) => {
     queryFn: () => fetchIssueComments(apiKey, issueId!),
     enabled: !!apiKey && !!issueId,
     staleTime: 60 * 1000
+  })
+}
+
+// History is expensive (~400-500 complexity points per issue against a 10k
+// budget), so it is fetched per ticket on demand, never across the workspace.
+// Cached for an hour since past transitions do not change.
+export const useIssueHistory = (issueId: string | undefined, enabled = true) => {
+  const apiKey = useAppStore((s) => s.settings.linearApiKey)
+  return useQuery({
+    queryKey: ['issue-history', issueId, apiKey],
+    queryFn: () => fetchIssueHistory(apiKey, issueId!),
+    enabled: !!apiKey && !!issueId && enabled,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 60 * 60 * 1000
   })
 }
 

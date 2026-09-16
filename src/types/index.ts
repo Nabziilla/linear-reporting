@@ -39,6 +39,13 @@ export interface LinearComment {
   user?: { name: string; email?: string } | null
 }
 
+export interface LinearHistoryEntry {
+  id: string
+  createdAt: string
+  fromState?: LinearState
+  toState?: LinearState
+}
+
 export interface LinearIssue {
   id: string
   identifier: string
