@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Box, Typography, Grid, Card, CardContent, Avatar, Tabs, Tab } from '@mui/material'
+import { useMemo } from 'react'
+import { Box, Typography, Grid, Card, CardContent, Avatar } from '@mui/material'
 import { styled, useTheme } from '@mui/material/styles'
 import InsightsIcon from '@mui/icons-material/Insights'
 import DonutLargeIcon from '@mui/icons-material/DonutLarge'
@@ -113,10 +113,7 @@ interface ReportsOverviewTabProps {
   heading: string
 }
 
-type SubTab = 'summary' | 'charts'
-
 export const ReportsOverviewTab = ({ scopedIssues, selectedTeam, heading }: ReportsOverviewTabProps) => {
-  const [subTab, setSubTab] = useState<SubTab>('summary')
   const theme = useTheme()
   const GRID = theme.palette.divider
   const AXIS = theme.palette.text.secondary
@@ -167,31 +164,21 @@ export const ReportsOverviewTab = ({ scopedIssues, selectedTeam, heading }: Repo
 
   return (
     <Box>
-      <Tabs
-        value={subTab} onChange={(_e, v) => setSubTab(v)}
-        sx={{ mb: 2.5, minHeight: 32, '& .MuiTab-root': { minHeight: 32, py: 0.5, textTransform: 'none', fontSize: '0.8rem', fontWeight: 600 } }}
-      >
-        <Tab label="Summary" value="summary" />
-        <Tab label="Charts" value="charts" />
-      </Tabs>
+      {/* KPIs and charts share one scrolling view: seven cards did not justify
+          a sub-tab of their own, and splitting them left the landing view
+          almost empty. */}
+      <SectionHeader icon={<InsightsIcon fontSize="small" />} color="#2563eb" title="Overview" subtitle={`Ticket health for ${heading}`} />
+      <KpiGrid>
+        <Kpi label="Total" value={overview.total} color="#2563eb" />
+        <Kpi label="Open" value={overview.open} hint="not done / cancelled" color="#0ea5e9" />
+        <Kpi label="In progress" value={overview.inProgress} color="#f97316" />
+        <Kpi label="Completed" value={overview.completed} hint={`${overview.completionRate}% completion`} color="#16a34a" />
+        <Kpi label="Created (7d)" value={overview.createdThisWeek} color="#0891b2" />
+        <Kpi label="Completed (7d)" value={overview.completedThisWeek} color="#16a34a" />
+        <Kpi label="Stale open" value={overview.staleOpen} hint="no update 14d+" color={overview.staleOpen > 0 ? '#ea580c' : '#64748b'} />
+      </KpiGrid>
 
-      {subTab === 'summary' && (
-        <>
-          <SectionHeader icon={<InsightsIcon fontSize="small" />} color="#2563eb" title="Overview" subtitle={`Ticket health for ${heading}`} />
-          <KpiGrid>
-            <Kpi label="Total" value={overview.total} color="#2563eb" />
-            <Kpi label="Open" value={overview.open} hint="not done / cancelled" color="#0ea5e9" />
-            <Kpi label="In progress" value={overview.inProgress} color="#f97316" />
-            <Kpi label="Completed" value={overview.completed} hint={`${overview.completionRate}% completion`} color="#16a34a" />
-            <Kpi label="Created (7d)" value={overview.createdThisWeek} color="#0891b2" />
-            <Kpi label="Completed (7d)" value={overview.completedThisWeek} color="#16a34a" />
-            <Kpi label="Stale open" value={overview.staleOpen} hint="no update 14d+" color={overview.staleOpen > 0 ? '#ea580c' : '#64748b'} />
-          </KpiGrid>
-        </>
-      )}
-
-      {subTab === 'charts' && (
-      <>
+      <Box mt={3.5}>
       <SectionHeader icon={<DonutLargeIcon fontSize="small" />} color="#7c3aed" title="Breakdowns & activity" subtitle="Where the work sits and how it flows" />
       <Grid container spacing={2.5}>
         <Grid item xs={12} md={6}>
@@ -263,8 +250,7 @@ export const ReportsOverviewTab = ({ scopedIssues, selectedTeam, heading }: Repo
           </CardContent></PanelCard>
         </Grid>
       </Grid>
-      </>
-      )}
+      </Box>
     </Box>
   )
 }
