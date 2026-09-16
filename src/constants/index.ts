@@ -39,18 +39,25 @@ export const STATE_TYPE_COLORS: Record<StateType, string> = {
 export const ALL_STATE_TYPES: StateType[] = ['triage', 'backlog', 'unstarted', 'started', 'completed', 'canceled', 'duplicate']
 export const ALL_PRIORITIES: Priority[] = [0, 1, 2, 3, 4]
 
-// QA team, matched on the first word of a Linear user's display name
-// (case-insensitive). Add or remove names here as the team changes.
-export const QA_TEAM_FIRST_NAMES = [
-  'himanshu',
-  'anjali',
-  'deepak',
-  'akash',
-  'onkar',
-  'atul',
-  'rajan',
-  'mah'
+// The QA team roster (Linear assignee display names). The single place to add
+// or remove people — both the "My QA Team" filter and the per-person breakdown
+// derive from it.
+export const QA_TEAM_MEMBERS = [
+  'Anjali Rajput',
+  'Himanshu Vashishtha',
+  'Akash Sharma',
+  'Deepak Aswal',
+  'Atul Roy',
+  'Onkar Pathak',
+  'Rajan Kanwat',
+  'Mah Izadiyar'
 ] as const
+
+// Derived from the roster above. Matching is on first name because Linear
+// reports users as display names via the API but as emails in CSV exports.
+export const QA_TEAM_FIRST_NAMES: readonly string[] = QA_TEAM_MEMBERS.map(
+  (n) => n.split(/\s+/)[0].toLowerCase()
+)
 
 const QA_FIRST_NAME_SET = new Set<string>(QA_TEAM_FIRST_NAMES)
 
@@ -125,14 +132,3 @@ export const QA_AGE_BUCKETS = [
 // A ticket in QA longer than this (days) is flagged as "aging" / a bottleneck.
 export const QA_AGING_THRESHOLD_DAYS = 3
 
-// The QA team roster (Linear assignee display names). Used for the "My QA Team"
-// filter and per-person breakdowns in Reports.
-export const QA_TEAM_MEMBERS = [
-  'Anjali Rajput',
-  'Himanshu Vashishtha',
-  'Akash Sharma',
-  'Deepak Aswal',
-  'Atul Roy',
-  'Onkar Pathak',
-  'Rajan Kanwat'
-] as const

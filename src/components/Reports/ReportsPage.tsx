@@ -8,9 +8,11 @@ import { useSearchParams } from 'react-router-dom'
 import { useFilteredIssues } from '../../hooks/useFilteredIssues'
 import { LinearConnectionNotice } from '../LinearConnectionNotice'
 import { QA_TEAM_MEMBERS } from '../../constants'
+import { Priority } from '../../types'
 import { FilterDropdown } from './FilterDropdown'
 import { DateRangeFilter, DateRange, DEFAULT_RANGE, filterByDateRange, describeRange } from './DateRangeFilter'
 import { StatusFilter, StatusSelection, buildStatusOptions, filterByStatus, describeStatuses } from './StatusFilter'
+import { PriorityFilter, PrioritySelection, filterByPriority, describePriorities } from './PriorityFilter'
 import { ReportsOverviewTab } from './ReportsOverviewTab'
 import { ReportsQaTab } from './ReportsQaTab'
 
@@ -31,6 +33,7 @@ export const ReportsPage = () => {
   const [selectedTeam, setSelectedTeam] = useState<string>(ALL_TEAMS)
   const [people, setPeople] = useState<string[]>([])
   const [dateRange, setDateRange] = useState<DateRange>(DEFAULT_RANGE)
+  const [priorities, setPriorities] = useState<PrioritySelection>([])
   const [statuses, setStatuses] = useState<StatusSelection>([])
 
   const peopleSet = useMemo(() => new Set(people), [people])
@@ -52,10 +55,23 @@ export const ReportsPage = () => {
     (peopleSet.size === 0 || (i.assignee && peopleSet.has(i.assignee.name)))
   ), [dateFiltered, selectedTeam, peopleSet])
 
-  // Status options/counts reflect team + people + date scope, taken before the
-  // status filter itself, so the dropdown keeps showing the full picture.
-  const statusOptions = useMemo(() => buildStatusOptions(teamPeopleFiltered), [teamPeopleFiltered])
-  const scopedIssues = useMemo(() => filterByStatus(teamPeopleFiltered, statuses), [teamPeopleFiltered, statuses])
+  // Priority counts come before the priority filter is applied, so the chips
+  // keep showing the full picture rather than collapsing to the selection.
+  const priorityCounts = useMemo(() => {
+    const counts: Partial<Record<Priority, number>> = {}
+    for (const i of teamPeopleFiltered) counts[i.priority] = (counts[i.priority] ?? 0) + 1
+    return counts
+  }, [teamPeopleFiltered])
+
+  const priorityFiltered = useMemo(
+    () => filterByPriority(teamPeopleFiltered, priorities),
+    [teamPeopleFiltered, priorities]
+  )
+
+  // Status options/counts reflect team + people + date + priority scope, taken
+  // before the status filter itself, so the dropdown shows the full picture.
+  const statusOptions = useMemo(() => buildStatusOptions(priorityFiltered), [priorityFiltered])
+  const scopedIssues = useMemo(() => filterByStatus(priorityFiltered, statuses), [priorityFiltered, statuses])
 
   // QA data is keyed by team short-code, not name, so resolve the selected team
   // name to its key from the full issue set (independent of the date filter).
@@ -91,6 +107,7 @@ export const ReportsPage = () => {
           <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.02em' }}>Reports</Typography>
           <Typography variant="body2" color="text.secondary">
             {heading}{people.length ? ` · ${peopleLabel}` : ''} · {describeRange(dateRange)}
+            {priorities.length > 0 ? ` · ${describePriorities(priorities)}` : ''}
             {statuses.length > 0 ? ` · ${describeStatuses(statuses)}` : ''} · {scopedIssues.length} tickets
           </Typography>
         </Box>
@@ -147,6 +164,7 @@ export const ReportsPage = () => {
         </FilterDropdown>
 
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <PriorityFilter value={priorities} onChange={setPriorities} counts={priorityCounts} />
         <StatusFilter value={statuses} onChange={setStatuses} options={statusOptions} />
       </Box>
 
@@ -158,7 +176,13 @@ export const ReportsPage = () => {
       {tab === 'overview' ? (
         <ReportsOverviewTab scopedIssues={scopedIssues} selectedTeam={selectedTeam} heading={heading} />
       ) : (
-        <ReportsQaTab heading={heading} teamKey={qaTeamKey} people={peopleSet} allIssues={allIssues} />
+        <ReportsQaTab
+          heading={heading}
+          teamKey={qaTeamKey}
+          people={peopleSet}
+          allIssues={allIssues}
+          scopedIssues={scopedIssues}
+        />
       )}
     </Box>
   )

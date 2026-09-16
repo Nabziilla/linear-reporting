@@ -20,6 +20,7 @@ import {
 import { QaPeriod, QaQueueItem, QaExitItem, Priority, LinearIssue } from '../../types'
 import { buildQaSummary } from './buildQaSummary'
 import { QaCommentsSummary } from './QaCommentsSummary'
+import { QATeamReport } from './QATeamReport'
 
 dayjs.extend(relativeTime)
 
@@ -215,11 +216,13 @@ interface ReportsQaTabProps {
   teamKey: string | null
   people: Set<string>
   allIssues: LinearIssue[]
+  /** Issues after the page's team/people/date/status filters, for the Team tab. */
+  scopedIssues: LinearIssue[]
 }
 
-type SubTab = 'snapshot' | 'exits' | 'activity' | 'comments' | 'details'
+type SubTab = 'snapshot' | 'exits' | 'activity' | 'comments' | 'team' | 'details'
 
-export const ReportsQaTab = ({ heading, teamKey, people, allIssues }: ReportsQaTabProps) => {
+export const ReportsQaTab = ({ heading, teamKey, people, allIssues, scopedIssues }: ReportsQaTabProps) => {
   const theme = useTheme()
   const [period, setPeriod] = useState<QaPeriod>('week')
   const [copied, setCopied] = useState(false)
@@ -309,6 +312,7 @@ export const ReportsQaTab = ({ heading, teamKey, people, allIssues }: ReportsQaT
             <Tab label={`Exits (${backToEarlierStage.length + outToLaterStage.length})`} value="exits" />
             <Tab label="Activity" value="activity" />
             <Tab label="Comments" value="comments" />
+            <Tab label="Team" value="team" />
             <Tab label="Details" value="details" />
           </Tabs>
 
@@ -411,6 +415,10 @@ export const ReportsQaTab = ({ heading, teamKey, people, allIssues }: ReportsQaT
               <SectionTitle>QA ticket comments</SectionTitle>
               <QaCommentsSummary issues={qaIssuesForComments} />
             </>
+          )}
+
+          {subTab === 'team' && (
+            <QATeamReport issues={scopedIssues} heading={heading} />
           )}
 
           {subTab === 'details' && (
