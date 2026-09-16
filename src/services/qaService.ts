@@ -1,6 +1,6 @@
 import { executeQuery } from './linearService'
 import { QA_STATE_NAMES, QA_FORWARD_EXIT_PATTERN } from '../constants'
-import { QaQueueItem, QaActivity, QaExitItem, Priority } from '../types'
+import { QaQueueItem, QaActivity, QaEntryItem, QaExitItem, Priority } from '../types'
 
 const QA_NAME_SET = new Set(QA_STATE_NAMES.map((n) => n.toLowerCase()))
 const isQaName = (name?: string | null) => !!name && QA_NAME_SET.has(name.toLowerCase())
@@ -119,6 +119,7 @@ export const fetchQaQueue = async (apiKey: string): Promise<QaQueueItem[]> => {
  */
 export const fetchQaActivity = async (apiKey: string, sinceISO: string): Promise<QaActivity> => {
   const sinceMs = new Date(sinceISO).getTime()
+  const enteredItems: QaEntryItem[] = []
   const exitedItems: QaExitItem[] = []
   const perDayMap = new Map<string, { entered: number; passed: number; bounced: number }>()
   let entered = 0
@@ -146,6 +147,15 @@ export const fetchQaActivity = async (apiKey: string, sinceISO: string): Promise
         if (isQaName(to)) {
           entered += 1
           bump(h.createdAt, 'entered')
+          enteredItems.push({
+            id: node.id,
+            identifier: node.identifier,
+            title: node.title,
+            url: node.url,
+            teamKey: node.team?.key ?? '—',
+            assigneeName: node.assignee?.name ?? null,
+            at: h.createdAt
+          })
         }
         if (isQaName(from) && !isQaName(to)) {
           const passed = isForwardExit(to)
@@ -175,6 +185,7 @@ export const fetchQaActivity = async (apiKey: string, sinceISO: string): Promise
     .map(([date, v]) => ({ date, ...v }))
 
   exitedItems.sort((a, b) => (a.at < b.at ? 1 : -1))
+  enteredItems.sort((a, b) => (a.at < b.at ? 1 : -1))
 
-  return { entered, exited: exitedItems.length, passed, bounced, exitedItems, perDay }
+  return { entered, exited: exitedItems.length, passed, bounced, enteredItems, exitedItems, perDay }
 }

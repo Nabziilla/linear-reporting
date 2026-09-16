@@ -3,7 +3,6 @@ import { styled } from '@mui/material/styles'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber'
 import AssessmentIcon from '@mui/icons-material/Assessment'
-import ScienceIcon from '@mui/icons-material/Science'
 import SettingsIcon from '@mui/icons-material/Settings'
 import BugReportIcon from '@mui/icons-material/BugReport'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -34,7 +33,6 @@ const NAV_ITEMS = [
   { label: 'Dashboard', path: NAV_ROUTES.DASHBOARD, icon: <DashboardIcon fontSize="small" /> },
   { label: 'Tickets', path: NAV_ROUTES.TICKETS, icon: <ConfirmationNumberIcon fontSize="small" /> },
   { label: 'Reports', path: NAV_ROUTES.REPORTS, icon: <AssessmentIcon fontSize="small" /> },
-  { label: 'QA Report', path: NAV_ROUTES.QA_REPORT, icon: <ScienceIcon fontSize="small" /> },
   { label: 'Settings', path: NAV_ROUTES.SETTINGS, icon: <SettingsIcon fontSize="small" /> },
   { label: 'Logs', path: '/logs', icon: <BugReportIcon fontSize="small" /> },
 ]
@@ -55,17 +53,17 @@ const DrawerContent = () => {
           <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: 14, lineHeight: 1 }}>L</Typography>
         </LogoMark>
         <Box>
-          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: '#F1F5F9', lineHeight: 1.2 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'text.primary', lineHeight: 1.2 }}>
             Linear Hub
           </Typography>
-          <Typography sx={{ fontSize: '0.7rem', color: '#64748B' }}>Reporting Dashboard</Typography>
+          <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>Reporting Dashboard</Typography>
         </Box>
       </DrawerHeader>
 
       <Divider sx={{ mx: 2, mb: 1 }} />
 
       <Box px={1}>
-        <Typography variant="overline" sx={{ px: 1, color: '#475569', fontSize: '0.65rem' }}>
+        <Typography variant="overline" sx={{ px: 1, color: 'text.disabled', fontSize: '0.65rem' }}>
           Navigation
         </Typography>
       </Box>
@@ -77,7 +75,7 @@ const DrawerContent = () => {
             selected={pathname === path}
             onClick={() => navigate(path)}
           >
-            <ListItemIcon sx={{ minWidth: 36, color: pathname === path ? '#8B95F8' : '#64748B' }}>
+            <ListItemIcon sx={{ minWidth: 36, color: pathname === path ? 'primary.main' : 'text.secondary' }}>
               {icon}
             </ListItemIcon>
             <ListItemText
@@ -95,10 +93,10 @@ const DrawerContent = () => {
           background: 'linear-gradient(135deg, rgba(104,117,245,0.15) 0%, rgba(38,181,206,0.1) 100%)',
           border: '1px solid rgba(104,117,245,0.2)',
         }}>
-          <Typography sx={{ fontSize: '0.72rem', color: '#8B95F8', fontWeight: 600, mb: 0.5 }}>
+          <Typography sx={{ fontSize: '0.72rem', color: 'primary.main', fontWeight: 600, mb: 0.5 }}>
             Linear Reporting
           </Typography>
-          <Typography sx={{ fontSize: '0.68rem', color: '#64748B', lineHeight: 1.4 }}>
+          <Typography sx={{ fontSize: '0.68rem', color: 'text.secondary', lineHeight: 1.4 }}>
             Real-time ticket insights powered by the Linear API
           </Typography>
         </Box>

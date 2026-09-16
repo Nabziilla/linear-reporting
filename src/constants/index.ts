@@ -83,7 +83,8 @@ export const qaMemberKey = (user: { name?: string; email?: string } | undefined)
 
 export const STORAGE_KEYS = {
   LINEAR_API_KEY: 'linear_api_key',
-  ANTHROPIC_API_KEY: 'anthropic_api_key'
+  ANTHROPIC_API_KEY: 'anthropic_api_key',
+  THEME_MODE: 'theme_mode'
 } as const
 
 export const LINEAR_GRAPHQL_ENDPOINT = 'https://api.linear.app/graphql'
@@ -106,6 +107,12 @@ export const QA_STATE_NAMES = ['In QA'] as const
 // A ticket that leaves "In QA" has either moved FORWARD (QA passed) or BOUNCED BACK
 // (QA found problems). Classify the destination state name.
 export const QA_FORWARD_EXIT_PATTERN = /ready for prod|ready for release|done|deployed|shipped|complete|release/i
+
+// Explicit destination groupings for the QA exit breakdown, matched case-insensitively
+// against the exact state name. Anything outside these lists is left out of both lists
+// rather than guessed at.
+export const QA_BACKWARD_EXIT_STATES = ['backlog', 'triage', 'ready for eng', 'to do', 'blocked'] as const
+export const QA_FORWARD_EXIT_STATES = ['in review', 'on pause', 'done', 'ready for prod'] as const
 
 // Age thresholds (in days) for how long a ticket has been sitting in QA.
 export const QA_AGE_BUCKETS = [

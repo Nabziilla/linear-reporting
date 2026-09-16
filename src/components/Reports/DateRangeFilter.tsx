@@ -20,7 +20,7 @@ export interface DateRange {
 
 export const DEFAULT_RANGE: DateRange = { key: 'all', basis: 'created' }
 
-const PRESET_DAYS: Record<Exclude<RangeKey, 'all' | 'custom'>, number> = {
+export const PRESET_DAYS: Record<Exclude<RangeKey, 'all' | 'custom'>, number> = {
   '7d': 7,
   '30d': 30,
   '90d': 90

@@ -26,10 +26,10 @@ export const StatsCards = ({ issues }: StatsCardsProps) => (
       const count = type === 'total' ? issues.length : countByStateType(issues, type)
       return (
         <Grid item xs={6} sm={4} md={3} lg={1.5} key={type}>
-          <Card sx={{
+          <Card sx={(theme) => ({
             position: 'relative',
             overflow: 'hidden',
-            background: `linear-gradient(135deg, #1A1D27 0%, ${accent} 100%)`,
+            background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${accent} 100%)`,
             borderColor: `${color}30`,
             '&::before': {
               content: '""',
@@ -39,7 +39,7 @@ export const StatsCards = ({ issues }: StatsCardsProps) => (
               background: color,
               borderRadius: '10px 10px 0 0',
             }
-          }}>
+          })}>
             <CardContent sx={{ pt: 2.5, pb: '16px !important' }}>
               <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1 }}>
                 {label}

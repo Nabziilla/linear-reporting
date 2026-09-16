@@ -126,11 +126,23 @@ export interface QaExitItem {
   passed: boolean // true = moved forward, false = bounced back
 }
 
+// A single "entered QA" transition within the reporting period.
+export interface QaEntryItem {
+  id: string
+  identifier: string
+  title: string
+  url: string
+  teamKey: string
+  assigneeName: string | null
+  at: string
+}
+
 export interface QaActivity {
   entered: number
   exited: number
   passed: number
   bounced: number
+  enteredItems: QaEntryItem[]
   exitedItems: QaExitItem[]
   perDay: { date: string; entered: number; passed: number; bounced: number }[]
 }
@@ -140,7 +152,10 @@ export interface ChatMessage {
   content: string
 }
 
+export type ThemeMode = 'light' | 'dark'
+
 export interface AppSettings {
   linearApiKey: string
   anthropicApiKey: string
+  themeMode: ThemeMode
 }

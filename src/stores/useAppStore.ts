@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { AppSettings, TicketFilters, Priority, StateType } from '../types'
+import { AppSettings, ThemeMode, TicketFilters, Priority, StateType } from '../types'
 import { STORAGE_KEYS } from '../constants'
 
 interface AppStore {
@@ -33,11 +33,14 @@ const initialLinearKey =
   localStorage.getItem(STORAGE_KEYS.LINEAR_API_KEY) || import.meta.env.VITE_LINEAR_API_KEY || ''
 const initialAnthropicKey =
   localStorage.getItem(STORAGE_KEYS.ANTHROPIC_API_KEY) || import.meta.env.VITE_ANTHROPIC_API_KEY || ''
+const initialThemeMode: ThemeMode =
+  localStorage.getItem(STORAGE_KEYS.THEME_MODE) === 'light' ? 'light' : 'dark'
 
 export const useAppStore = create<AppStore>((set) => ({
   settings: {
     linearApiKey: initialLinearKey,
-    anthropicApiKey: initialAnthropicKey
+    anthropicApiKey: initialAnthropicKey,
+    themeMode: initialThemeMode
   },
   filters: DEFAULT_FILTERS,
 
@@ -47,6 +50,9 @@ export const useAppStore = create<AppStore>((set) => ({
     }
     if (newSettings.anthropicApiKey !== undefined) {
       localStorage.setItem(STORAGE_KEYS.ANTHROPIC_API_KEY, newSettings.anthropicApiKey)
+    }
+    if (newSettings.themeMode !== undefined) {
+      localStorage.setItem(STORAGE_KEYS.THEME_MODE, newSettings.themeMode)
     }
     set((state) => ({ settings: { ...state.settings, ...newSettings } }))
   },

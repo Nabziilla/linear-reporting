@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Box, Card, CardContent, Typography, TextField, Button, Alert, CircularProgress, Divider, Link, Stack } from '@mui/material'
+import { Box, Card, CardContent, Typography, TextField, Button, Alert, CircularProgress, Divider, Link, Stack, ToggleButtonGroup, ToggleButton } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
+import LightModeIcon from '@mui/icons-material/LightMode'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -11,6 +13,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import { useAppStore } from '../../stores/useAppStore'
 import { useLinearViewer } from '../../hooks/useLinearData'
 import { LinearDataUpload } from '../LinearDataUpload'
+import { ThemeMode } from '../../types'
 
 const PageRoot = styled(Box)(({ theme }) => ({
   maxWidth: 600,
@@ -26,7 +29,7 @@ const StatusRow = styled(Box)(({ theme }) => ({
   gap: theme.spacing(1),
   padding: theme.spacing(1.5),
   borderRadius: theme.shape.borderRadius,
-  backgroundColor: '#f8fafc',
+  backgroundColor: theme.palette.action.hover,
   marginTop: theme.spacing(1.5)
 }))
 
@@ -104,6 +107,10 @@ export const SettingsPage = () => {
     updateSettings({ anthropicApiKey: values.anthropicApiKey.trim() })
   }
 
+  const setThemeMode = (mode: ThemeMode | null) => {
+    if (mode) updateSettings({ themeMode: mode })
+  }
+
   const [uploadCount, setUploadCount] = useState<number>(() => {
     try {
       const raw = sessionStorage.getItem('linear-upload-data')
@@ -122,6 +129,30 @@ export const SettingsPage = () => {
   return (
     <PageRoot>
       <Typography variant="h5">Settings</Typography>
+
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>Appearance</Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Choose how the dashboard looks on this device.
+          </Typography>
+          <Divider sx={{ my: 2 }} />
+          <ToggleButtonGroup
+            value={settings.themeMode}
+            exclusive
+            onChange={(_e, mode) => setThemeMode(mode)}
+          >
+            <ToggleButton value="light">
+              <LightModeIcon fontSize="small" sx={{ mr: 1 }} />
+              Light
+            </ToggleButton>
+            <ToggleButton value="dark">
+              <DarkModeIcon fontSize="small" sx={{ mr: 1 }} />
+              Dark
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent>

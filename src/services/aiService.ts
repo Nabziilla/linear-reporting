@@ -63,3 +63,58 @@ If asked for counts, lists, or summaries, reference the actual ticket data provi
   const data = await response.json()
   return data.content[0].text as string
 }
+
+export interface QaCommentSummaryInput {
+  identifier: string
+  title: string
+  comment: string
+  commentAuthor?: string
+}
+
+export interface QaCommentSummaryItem {
+  identifier: string
+  summary: string
+}
+
+// One line per ticket, "IDENTIFIER: summary", so per-ticket attribution survives
+// even if the model reorders or drops a line — anything missing just falls back to '—'.
+export const summarizeQaComments = async (
+  apiKey: string,
+  items: QaCommentSummaryInput[]
+): Promise<QaCommentSummaryItem[]> => {
+  const ticketBlock = items
+    .map((i) => `[${i.identifier}] ${i.title}\nComment${i.commentAuthor ? ` (${i.commentAuthor})` : ''}: ${i.comment}`)
+    .join('\n\n')
+
+  const systemPrompt = `You summarize QA ticket comments into a very high-level, scannable brief for a QA lead.
+For EVERY ticket given, output exactly one line in the form:
+IDENTIFIER: <one short, plain-English sentence, 12 words or fewer>
+Be blunt and concrete (what's broken, blocked, or confirmed) rather than vague ("has an issue").
+Never merge multiple tickets into one line, never omit a ticket, never add commentary outside this format.`
+
+  const response = await fetch('/api/ai/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiKey,
+      messages: [{ role: 'user', content: ticketBlock }],
+      systemPrompt
+    })
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(err.error ?? 'AI service error')
+  }
+
+  const data = await response.json()
+  const text = data.content[0].text as string
+
+  const byIdentifier = new Map<string, string>()
+  text.split('\n').forEach((line) => {
+    const match = line.match(/^\[?([A-Za-z][A-Za-z0-9]*-\d+)\]?:?\s*(.+)$/)
+    if (match) byIdentifier.set(match[1], match[2].trim())
+  })
+
+  return items.map((i) => ({ identifier: i.identifier, summary: byIdentifier.get(i.identifier) ?? '—' }))
+}
