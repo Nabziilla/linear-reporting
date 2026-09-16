@@ -9,7 +9,7 @@ import {
   QA_TEAM_FIRST_NAMES, qaMemberKey,
   PRIORITY_COLORS, PRIORITY_LABELS, STATE_TYPE_COLORS
 } from '../../constants'
-import { QARoundsCell } from './QARoundsCell'
+import { QARoundsCell, QAWaitCell } from './QARoundsCell'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
@@ -289,6 +289,11 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
                       <TableCell sx={{ fontWeight: 600, width: 110 }}>ID</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>Title</TableCell>
                       <TableCell sx={{ fontWeight: 600, width: 100 }}>
+                        <Tooltip title="Time spent sitting in a QA state. ⏳ means still waiting." arrow>
+                          <span>In QA</span>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 100 }}>
                         <Tooltip title="Times the ticket went back from QA to development" arrow>
                           <span>QA rework</span>
                         </Tooltip>
@@ -331,6 +336,9 @@ export const QATeamReport = ({ issues, heading }: QATeamReportProps) => {
                           <Typography variant="body2" noWrap sx={{ maxWidth: 420 }}>
                             {issue.title}
                           </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <QAWaitCell issueId={issue.id} />
                         </TableCell>
                         <TableCell>
                           <QARoundsCell issueId={issue.id} />
