@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  Box, Typography, CircularProgress, Tabs, Tab, MenuItem, ListItemText, Divider
+  Box, Typography, CircularProgress, Tabs, Tab, MenuItem, ListItemText, Divider, Button
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import CheckIcon from '@mui/icons-material/Check'
@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useFilteredIssues } from '../../hooks/useFilteredIssues'
 import { LinearConnectionNotice } from '../LinearConnectionNotice'
 import { QA_TEAM_MEMBERS } from '../../constants'
-import { Priority } from '../../types'
+import { Priority, StateType, LinearIssue } from '../../types'
 import { FilterDropdown } from './FilterDropdown'
 import { DateRangeFilter, DateRange, DEFAULT_RANGE, filterByDateRange, describeRange } from './DateRangeFilter'
 import { StatusFilter, StatusSelection, buildStatusOptions, filterByStatus, describeStatuses } from './StatusFilter'
@@ -19,6 +19,9 @@ import { ReportsQaTab } from './ReportsQaTab'
 const ALL_TEAMS = '__all__'
 const ROSTER = QA_TEAM_MEMBERS as readonly string[]
 const firstName = (n: string) => n.split(' ')[0]
+
+const CLOSED_TYPES: StateType[] = ['completed', 'canceled', 'duplicate']
+const isOpen = (issue: LinearIssue) => !CLOSED_TYPES.includes(issue.state?.type as StateType)
 
 const LoadingBox = styled(Box)({ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 240 })
 
@@ -35,6 +38,7 @@ export const ReportsPage = () => {
   const [dateRange, setDateRange] = useState<DateRange>(DEFAULT_RANGE)
   const [priorities, setPriorities] = useState<PrioritySelection>([])
   const [statuses, setStatuses] = useState<StatusSelection>([])
+  const [showClosed, setShowClosed] = useState(false)
 
   const peopleSet = useMemo(() => new Set(people), [people])
 
@@ -50,10 +54,16 @@ export const ReportsPage = () => {
   }, [allIssues])
 
   const dateFiltered = useMemo(() => filterByDateRange(allIssues, dateRange), [allIssues, dateRange])
-  const teamPeopleFiltered = useMemo(() => dateFiltered.filter((i) =>
+
+  const openFiltered = useMemo(
+    () => (showClosed ? dateFiltered : dateFiltered.filter(isOpen)),
+    [dateFiltered, showClosed]
+  )
+
+  const teamPeopleFiltered = useMemo(() => openFiltered.filter((i) =>
     (selectedTeam === ALL_TEAMS || i.team?.name === selectedTeam) &&
     (peopleSet.size === 0 || (i.assignee && peopleSet.has(i.assignee.name)))
-  ), [dateFiltered, selectedTeam, peopleSet])
+  ), [openFiltered, selectedTeam, peopleSet])
 
   // Priority counts come before the priority filter is applied, so the chips
   // keep showing the full picture rather than collapsing to the selection.
@@ -70,8 +80,45 @@ export const ReportsPage = () => {
 
   // Status options/counts reflect team + people + date + priority scope, taken
   // before the status filter itself, so the dropdown shows the full picture.
-  const statusOptions = useMemo(() => buildStatusOptions(priorityFiltered), [priorityFiltered])
+  // Built before the open/closed filter so closed statuses stay selectable —
+  // otherwise "Open only" would erase them from the menu and the conflict
+  // warning below could never fire.
+  const statusOptions = useMemo(() => {
+    const base = dateFiltered.filter((i) =>
+      (selectedTeam === ALL_TEAMS || i.team?.name === selectedTeam) &&
+      (peopleSet.size === 0 || (i.assignee && peopleSet.has(i.assignee.name)))
+    )
+    return buildStatusOptions(filterByPriority(base, priorities))
+  }, [dateFiltered, selectedTeam, peopleSet, priorities])
   const scopedIssues = useMemo(() => filterByStatus(priorityFiltered, statuses), [priorityFiltered, statuses])
+
+  // "Active" means the filter departs from its default, so Clear all only
+  // appears when there is something to clear.
+  const activeFilterCount =
+    (selectedTeam !== ALL_TEAMS ? 1 : 0) +
+    (people.length > 0 ? 1 : 0) +
+    (dateRange.key !== DEFAULT_RANGE.key ? 1 : 0) +
+    (showClosed ? 1 : 0) +
+    (priorities.length > 0 ? 1 : 0) +
+    (statuses.length > 0 ? 1 : 0)
+
+  const resetFilters = () => {
+    setSelectedTeam(ALL_TEAMS)
+    setPeople([])
+    setDateRange(DEFAULT_RANGE)
+    setShowClosed(false)
+    setPriorities([])
+    setStatuses([])
+  }
+
+  // Picking a closed status while "Open only" is active returns nothing, which
+  // reads as a bug. Name the conflicting statuses instead of showing a blank.
+  const hiddenByOpenOnly = useMemo(() => {
+    if (showClosed || statuses.length === 0) return []
+    return statusOptions
+      .filter((o) => statuses.includes(o.name) && CLOSED_TYPES.includes(o.type as StateType))
+      .map((o) => o.name)
+  }, [showClosed, statuses, statusOptions])
 
   // QA data is keyed by team short-code, not name, so resolve the selected team
   // name to its key from the full issue set (independent of the date filter).
@@ -164,9 +211,40 @@ export const ReportsPage = () => {
         </FilterDropdown>
 
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <FilterDropdown
+          label={showClosed ? 'Open and closed' : 'Open only'}
+          active={showClosed}
+          minWidth={180}
+        >
+          {(close) => [
+            <MenuItem key="open" dense selected={!showClosed} onClick={() => { setShowClosed(false); close() }}>
+              <Box sx={{ width: 24, display: 'flex', alignItems: 'center' }}>
+                {!showClosed && <CheckIcon sx={{ fontSize: 16 }} />}
+              </Box>
+              <ListItemText primary="Open only" primaryTypographyProps={{ variant: 'body2' }} />
+            </MenuItem>,
+            <MenuItem key="all" dense selected={showClosed} onClick={() => { setShowClosed(true); close() }}>
+              <Box sx={{ width: 24, display: 'flex', alignItems: 'center' }}>
+                {showClosed && <CheckIcon sx={{ fontSize: 16 }} />}
+              </Box>
+              <ListItemText primary="Open and closed" primaryTypographyProps={{ variant: 'body2' }} />
+            </MenuItem>
+          ]}
+        </FilterDropdown>
         <PriorityFilter value={priorities} onChange={setPriorities} counts={priorityCounts} />
         <StatusFilter value={statuses} onChange={setStatuses} options={statusOptions} />
+        {activeFilterCount > 0 && (
+          <Button size="small" onClick={resetFilters} sx={{ minWidth: 0, textTransform: 'none' }}>
+            Clear all ({activeFilterCount})
+          </Button>
+        )}
       </Box>
+
+      {hiddenByOpenOnly.length > 0 && (
+        <Typography variant="caption" sx={{ color: '#f97316', display: 'block', mb: 2 }}>
+          “Open only” is hiding {hiddenByOpenOnly.join(', ')} — switch to “Open and closed” to see them.
+        </Typography>
+      )}
 
       <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ mb: 3, minHeight: 36, '& .MuiTab-root': { minHeight: 36, textTransform: 'none', fontWeight: 600 } }}>
         <Tab label="Overview" value="overview" />
