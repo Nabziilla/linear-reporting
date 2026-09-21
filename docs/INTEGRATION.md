@@ -79,18 +79,52 @@ only — it is the richest view and subsumes most of the Dashboard.
 Two keys, both entered through the **Settings** page at runtime and stored in
 `localStorage`:
 
-| Key | Storage key | Required for |
-|---|---|---|
-| Linear API key | `linear_api_key` | Everything — no key, no data |
-| Anthropic API key | `anthropic_api_key` | AI chat only |
+| Key | Storage key | Required for | Where to get it |
+|---|---|---|---|
+| Linear API key | `linear_api_key` | Everything — no key, no data | Linear → Settings → Security & access → Personal API keys |
+| Anthropic API key | `anthropic_api_key` | AI chat only | console.anthropic.com → API Keys |
 
-Build-time fallbacks exist (`VITE_LINEAR_API_KEY`, `VITE_ANTHROPIC_API_KEY`)
-but are read into the client bundle, so they are visible to anyone with the
-page. See [Security](#security).
+Neither key is committed to this repo, and neither should be. See
+[Security](#security) for the handling rules.
 
-A CSV export from Linear can be uploaded instead of supplying an API key. That
-path is a fallback for keyless sessions; the API takes precedence whenever a
-key is present.
+### Environment variables
+
+Build-time fallbacks, read if the corresponding `localStorage` value is absent:
+
+```bash
+# .env.local — gitignored, never commit real values
+VITE_LINEAR_API_KEY=lin_api_...
+VITE_ANTHROPIC_API_KEY=sk-ant-...
+```
+
+`.env`, `.env.local` and `.env.*.local` are all gitignored.
+
+> **These are compiled into the client bundle.** Vite inlines any `VITE_`-prefixed
+> variable at build time, so both keys become readable in the shipped JavaScript.
+> They are acceptable for a local single-user build and unsuitable for a shared
+> deployment — see [issue 3](#3-api-keys-live-in-browser-storage).
+
+### All browser storage keys
+
+The complete set the app reads or writes, for anyone auditing storage or
+clearing state:
+
+| Key | Store | Contents | Lifetime |
+|---|---|---|---|
+| `linear_api_key` | localStorage | Linear personal API key | Until cleared |
+| `anthropic_api_key` | localStorage | Anthropic API key | Until cleared |
+| `theme_mode` | localStorage | `light` or `dark` | Until cleared |
+| `linear-upload-data` | sessionStorage | Parsed CSV issue rows | Tab session |
+| `linear-upload-logs` | sessionStorage | CSV import diagnostics | Tab session |
+| `linear-upload-all-mapped` | sessionStorage | Raw mapped CSV rows | Tab session |
+
+The three `linear-upload-*` keys back the CSV fallback path. A CSV export from
+Linear can be uploaded instead of supplying an API key; the API takes
+precedence whenever a key is present. Because they use `sessionStorage`,
+uploaded data does not survive closing the tab.
+
+Clearing site data for the app's origin resets all six and returns it to a
+first-run state.
 
 ### Services
 
@@ -188,10 +222,26 @@ already does for Anthropic.
 
 - **No write access.** The app only reads from Linear. A leaked Linear key is
   still a data-exposure risk — it can read every issue the key's owner can see.
-- **Anthropic key is a billing credential.** Unbounded spend if leaked.
+- **Anthropic key is a billing credential.** Unbounded spend if leaked, and no
+  per-key cap. Leaked keys are scraped from public repos within minutes.
 - **CSP:** must allow `api.linear.app` (GraphQL) and the Express server origin.
 - **CORS:** the Express server currently allows only `http://localhost:5173`.
   Update `server/index.ts` for any other origin.
+
+### Key handling rules
+
+1. **Never commit real key values** — not to this repo, not to the platform
+   repo, not in documentation. Both are gitignored via `.env*`; keep it that
+   way. GitHub secret scanning will auto-revoke a committed Anthropic key, and
+   a committed key stays in git history until the history is rewritten.
+2. **Share keys through a secrets manager**, not a file or a chat message.
+3. **Each developer uses their own Linear key.** It is a personal API key, so
+   it inherits that person's workspace visibility.
+4. **Rotate immediately if exposed.** Linear: revoke under Security & access.
+   Anthropic: revoke in the console, and check usage for unexpected spend.
+5. **For any shared deployment**, move both keys server-side as environment
+   variables on the Express server and proxy Linear through it, as is already
+   done for Anthropic. Browser-held keys are readable by every user of the page.
 
 ---
 
