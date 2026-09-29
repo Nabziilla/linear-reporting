@@ -36,9 +36,12 @@ const QA_ACTIVITY_QUERY = `
   query QaActivity($after: String, $since: DateTimeOrDuration!) {
     issues(first: 100, after: $after, filter: { updatedAt: { gt: $since } }) {
       nodes {
-        id identifier title url
+        id identifier title url priority priorityLabel
         team { key }
         assignee { name }
+        labels(first: 10) {
+          nodes { name color }
+        }
         history(first: 60) {
           nodes { createdAt fromState { name } toState { name } }
         }
@@ -166,6 +169,9 @@ export const fetchQaActivity = async (apiKey: string, sinceISO: string): Promise
             url: node.url,
             teamKey: node.team?.key ?? '—',
             assigneeName: node.assignee?.name ?? null,
+            priority: (node.priority ?? 0) as Priority,
+            priorityLabel: node.priorityLabel ?? 'No Priority',
+            labels: node.labels?.nodes ?? [],
             at: h.createdAt,
             toState: to ?? 'Unknown',
             passed

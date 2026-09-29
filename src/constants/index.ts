@@ -114,6 +114,9 @@ export const QA_FORWARD_EXIT_PATTERN = /ready for prod|ready for release|done|de
 export const QA_BACKWARD_EXIT_STATES = ['backlog', 'triage', 'ready for eng', 'to do', 'blocked'] as const
 export const QA_FORWARD_EXIT_STATES = ['in review', 'on pause', 'done', 'ready for prod'] as const
 
+// States to track for "bounced back from QA in last 24h" summary
+export const QA_BOUNCE_BACK_STATES = ['triage', 'to do', 'in progress', 'in review', 'on pause'] as const
+
 // Age thresholds (in days) for how long a ticket has been sitting in QA.
 export const QA_AGE_BUCKETS = [
   { key: 'lt1', label: '< 1 day', maxDays: 1, color: '#22c55e' },

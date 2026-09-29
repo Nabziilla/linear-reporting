@@ -15,7 +15,7 @@ import { useQaReport } from '../../hooks/useQaReport'
 import { LinearConnectionNotice } from '../LinearConnectionNotice'
 import {
   QA_AGING_THRESHOLD_DAYS, PRIORITY_COLORS, PRIORITY_LABELS,
-  QA_BACKWARD_EXIT_STATES, QA_FORWARD_EXIT_STATES
+  QA_BACKWARD_EXIT_STATES, QA_FORWARD_EXIT_STATES, QA_BOUNCE_BACK_STATES
 } from '../../constants'
 import { QaPeriod, QaQueueItem, QaExitItem, Priority, LinearIssue } from '../../types'
 import { buildQaSummary } from './buildQaSummary'
@@ -40,9 +40,16 @@ const formatAge = (ms: number): string => {
   return `${days}d`
 }
 
+const isWithinLast24h = (isoString: string): boolean => {
+  const itemTime = dayjs(isoString)
+  const now = dayjs()
+  return now.diff(itemTime, 'hour') < 24
+}
+
 const normalizeStateName = (name: string) => name.trim().toLowerCase()
 const isBackwardExit = (name: string) => (QA_BACKWARD_EXIT_STATES as readonly string[]).includes(normalizeStateName(name))
 const isListedForwardExit = (name: string) => (QA_FORWARD_EXIT_STATES as readonly string[]).includes(normalizeStateName(name))
+const isBounceBackState = (name: string) => (QA_BOUNCE_BACK_STATES as readonly string[]).includes(normalizeStateName(name))
 
 const KpiGrid = styled(Box)(({ theme }) => ({
   display: 'grid',
@@ -155,8 +162,10 @@ const ExitTable = ({ items, emptyText }: { items: QaExitItem[]; emptyText: strin
           <TableRow>
             <TableCell>ID</TableCell>
             <TableCell>Title</TableCell>
+            <TableCell>Priority</TableCell>
             <TableCell>Team</TableCell>
             <TableCell>Assignee</TableCell>
+            <TableCell>Labels</TableCell>
             <TableCell>Moved to</TableCell>
             <TableCell>When</TableCell>
           </TableRow>
@@ -172,8 +181,14 @@ const ExitTable = ({ items, emptyText }: { items: QaExitItem[]; emptyText: strin
                   <Typography variant="body2" noWrap>{e.title}</Typography>
                 </Tooltip>
               </TableCell>
+              <TableCell><PriorityChip priority={e.priority} /></TableCell>
               <TableCell><Chip size="small" variant="outlined" label={e.teamKey} sx={{ height: 20, fontSize: '0.68rem' }} /></TableCell>
               <TableCell><Typography variant="body2" noWrap>{e.assigneeName ?? '—'}</Typography></TableCell>
+              <TableCell sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                {e.labels.length > 0 ? e.labels.map((l) => (
+                  <Chip key={l.name} size="small" label={l.name} sx={{ height: 20, fontSize: '0.68rem', bgcolor: `${l.color}22`, color: l.color, fontWeight: 500 }} />
+                )) : <Typography variant="caption" color="text.secondary">—</Typography>}
+              </TableCell>
               <TableCell><Chip size="small" label={e.toState} sx={{ height: 20, fontSize: '0.68rem' }} /></TableCell>
               <TableCell sx={{ whiteSpace: 'nowrap' }}>
                 <Tooltip title={dayjs(e.at).format('DD MMM YYYY, HH:mm')}>
@@ -234,6 +249,10 @@ export const ReportsQaTab = ({ heading, teamKey, people, allIssues }: ReportsQaT
   const exitedItems = activity?.exitedItems ?? []
   const backToEarlierStage = useMemo(
     () => exitedItems.filter((e) => isBackwardExit(e.toState)),
+    [exitedItems]
+  )
+  const bouncedBackLast24h = useMemo(
+    () => exitedItems.filter((e) => isBounceBackState(e.toState) && isWithinLast24h(e.at)),
     [exitedItems]
   )
   const outToLaterStage = useMemo(
@@ -349,7 +368,22 @@ export const ReportsQaTab = ({ heading, teamKey, people, allIssues }: ReportsQaT
                 <Kpi label="Cleared QA" value={activity?.exited ?? 0} hint="left the QA state" />
                 <Kpi label="Passed forward" value={activity?.passed ?? 0} hint="→ Ready for Prod / Done" color="#16a34a" />
                 <Kpi label="Bounced back" value={activity?.bounced ?? 0} hint={`${bounceRate}% of cleared`} color={bounceRate >= 30 ? '#dc2626' : undefined} />
+                <Kpi label="Bounced back (24h)" value={bouncedBackLast24h.length} hint="to Triage, To Do, In Progress, In Review, On Pause" color={bouncedBackLast24h.length > 0 ? '#ea580c' : undefined} />
               </KpiGrid>
+
+              {bouncedBackLast24h.length > 0 && (
+                <>
+                  <SectionTitle>Bounced back from QA in the last 24 hours ({bouncedBackLast24h.length})</SectionTitle>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <ExitTable
+                        items={bouncedBackLast24h}
+                        emptyText=""
+                      />
+                    </CardContent>
+                  </Card>
+                </>
+              )}
 
               <SectionTitle>Bounced back to an earlier stage — {PERIOD_LABEL[period]} ({backToEarlierStage.length})</SectionTitle>
               <Card variant="outlined">

@@ -121,6 +121,9 @@ export interface QaExitItem {
   url: string
   teamKey: string
   assigneeName: string | null
+  priority: Priority
+  priorityLabel: string
+  labels: LinearLabel[]
   at: string
   toState: string
   passed: boolean // true = moved forward, false = bounced back
